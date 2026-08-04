@@ -2,7 +2,9 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 1: Identity & Access
+## [Unreleased] — Milestone 2: Core Orchestration
+
+## [Milestone 1] — 2026-08-04 — Identity & Access
 
 ### Added
 - Entra ID app registration for the platform API (App Roles: Admin, Agent.User, Auditor; delegated `access_as_user` scope), created via `scripts/setup-entra-app.ps1` (idempotent, handles demo role assignments).
@@ -11,6 +13,13 @@ All notable changes to this project are documented in this file. Format loosely 
 - `.githooks/pre-commit`: blocks commits containing real values from `.env`, self-installed via `scripts/load-env.ps1` — defense-in-depth so local configuration values can never accidentally reach a commit.
 - `docs/security-model.md` and `docs/diagrams/auth-sequence.md`: security model documentation and end-to-end auth sequence diagram.
 - CI: `test-api` job (ruff, mypy, pytest) added to `.github/workflows/ci.yml`.
+
+### Fixed
+- `apps/api/app/config.py`: audience validation only accepted the `api://<client-id>` App ID URI form; live verification (not just unit tests) surfaced that Entra ID actually issues the bare client-id GUID for this app's own exposed scope. Now accepts both.
+- `apps/api/pyproject.toml`: `pytest` (CI's invocation) doesn't add the CWD to `sys.path` the way `python -m pytest` (local invocation) does — added `pythonpath = ["."]` so imports resolve consistently either way.
+
+### Verified
+- End-to-end against a real Entra ID token (not synthetic test tokens): `GET /me` and `GET /admin/ping` both behaved correctly for an Admin-role user.
 
 ### Deferred
 - Dataverse security roles (Admin/Agent.User/Auditor mirroring the Entra App Roles) - creating them now would mean empty, privilege-less role objects since no custom Dataverse tables exist yet. Moved to Milestone 7, alongside the actual business-data model. See `PROJECT_JOURNAL.md`.

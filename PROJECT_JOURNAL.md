@@ -99,6 +99,20 @@ Attempted to create the Dataverse-side "Admin/Agent.User/Auditor" security roles
 
 Rather than push through that for a fairly low-value result right now: Dataverse security roles are fundamentally table-privilege sets, and no custom tables exist yet (that's Milestone 7's business-data-model work) - creating them now would mean empty, privilege-less role objects that get edited again later anyway. Deferred actual creation to Milestone 7, alongside the real data model they'd govern; fixed the role naming convention now (matching the Entra App Role values exactly) so the eventual mapping is unambiguous. Documented in `docs/security-model.md`.
 
-### Milestone 1 status
+### Bug found via live verification - audience claim format
 
-Core identity/auth scaffolding, documentation, and CI are in place. Remaining before this milestone can be called complete: the user completing the interactive `scripts/demo-auth.ps1` sign-in to verify the auth flow end-to-end against a real token (not just the unit tests' synthetic ones).
+Running `scripts/demo-auth.ps1` for real (not just the unit tests' synthetic tokens) surfaced a genuine bug: the API rejected a valid, correctly-signed, correctly-scoped token with "Audience doesn't match." Decoded the real token's claims to confirm: Entra ID issues the bare client-id GUID as `aud` for this app's own exposed scope in the device-code flow, not the `api://<client-id>` App ID URI form the API's config assumed. Fixed `Settings.audience` to accept both forms (PyJWT's `audience` param takes a list) rather than hardcode one observed behavior as the only valid case - other flows/configurations may still issue the `api://` form. Also added a debug claims printout to `scripts/demo-auth.ps1`, since decoding the actual token (rather than guessing from the error message) is what found the real cause in minutes instead of trial-and-error.
+
+**Lesson:** the synthetic unit tests were internally consistent (they set `aud` to whatever `settings.audience` computed, so they'd pass even if that computation were wrong) but couldn't catch a mismatch between assumption and Entra's real behavior. Only a live token exposed it. Worth remembering for future auth-adjacent work: unit tests validate the code does what it's told; an end-to-end pass against the real identity provider validates the code was told the right thing.
+
+### Milestone 1 - complete (2026-08-04)
+
+Verified end-to-end against a real Entra ID token: `GET /me` returned the correct claims (`roles: ["Admin"]`), `GET /admin/ping` returned `200 {"message": "pong", "role": "Admin"}`. Identity and access control work for real, not just in tests.
+
+**Delivered:** Entra ID app registration with App Roles, FastAPI bearer-token validation and role-based authorization (7 automated tests + live verification), device-code auth demo script, security model documentation, auth sequence diagram, CI job for the Python app, and a pre-commit hook protecting local configuration.
+
+**Deferred to Milestone 7 (documented, not forgotten):** Dataverse security roles mirroring the Entra App Roles - deferred until real business-data tables exist for them to govern.
+
+### Next steps
+
+- Milestone 2: Azure AI Foundry project + model deployment, Semantic Kernel service behind APIM, one working custom agent end-to-end.

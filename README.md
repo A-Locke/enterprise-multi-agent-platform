@@ -27,7 +27,7 @@ PROJECT_JOURNAL.md           Milestone-by-milestone decisions, blockers, resolut
 
 ## Status
 
-Foundation milestone (M0) complete — repo scaffold, governing ADRs, and first Azure infrastructure (`rg-dev`, France Central: Key Vault, Container Registry, Log Analytics/App Insights, APIM, Cost Management budget) provisioned and live. Power Platform Dataverse environment also live. Starting Milestone 1 (Identity & Access) next. See [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) for full milestone history and [`docs/adr/`](docs/adr/) for architecture decisions.
+Milestones 0 (Foundation) and 1 (Identity & Access) complete. Live: Azure infrastructure (`rg-dev`, France Central — Key Vault, Container Registry, Log Analytics/App Insights, APIM, Cost Management budget), Power Platform Dataverse environment, and an Entra ID-secured API (`apps/api`) with role-based authorization verified end-to-end against a real token. Starting Milestone 2 (Core Orchestration) next. See [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) for full milestone history and [`docs/adr/`](docs/adr/) for architecture decisions.
 
 ## Local prerequisites
 
@@ -44,7 +44,7 @@ See [`manual-setup.md`](manual-setup.md) for the handful of steps that cannot be
 
 ## Getting started
 
-No application code yet — Milestone 0 delivered infrastructure only. Documentation and diagrams will grow alongside the implementation; see the milestone plan in [`docs/architecture/`](docs/) (added as each milestone lands).
+`apps/api` runs standalone (see [`apps/api/README.md`](apps/api/README.md)) — it's an auth skeleton so far, not the full orchestration backend (that's Milestone 2). Documentation and diagrams grow alongside the implementation; see [`docs/`](docs/) (added as each milestone lands).
 
 ## Local configuration
 
