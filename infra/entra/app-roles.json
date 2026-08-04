@@ -1,0 +1,26 @@
+[
+  {
+    "id": "8f2a1e3c-9b4d-4a7e-8c1f-2d5e6a7b8c9d",
+    "allowedMemberTypes": ["User"],
+    "displayName": "Admin",
+    "description": "Full administrative access: agent/tool configuration, user and role management, audit log access.",
+    "value": "Admin",
+    "isEnabled": true
+  },
+  {
+    "id": "3c7d9e1a-5f2b-4c8e-9a3d-6b1e4f7c2a8e",
+    "allowedMemberTypes": ["User"],
+    "displayName": "Agent User",
+    "description": "Can interact with agents and view own conversation history.",
+    "value": "Agent.User",
+    "isEnabled": true
+  },
+  {
+    "id": "6e4b2c8a-1d9f-4e6a-8b3c-9f2d5a7e1c4b",
+    "allowedMemberTypes": ["User"],
+    "displayName": "Auditor",
+    "description": "Read-only access to audit logs and configuration for compliance review.",
+    "value": "Auditor",
+    "isEnabled": true
+  }
+]

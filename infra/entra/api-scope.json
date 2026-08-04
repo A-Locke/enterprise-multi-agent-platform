@@ -1,0 +1,15 @@
+{
+  "requestedAccessTokenVersion": 2,
+  "oauth2PermissionScopes": [
+    {
+      "id": "4a8e2f1c-6d3b-4e9a-8c5f-1d7e3a9b2c6f",
+      "adminConsentDescription": "Allows the app to access the Enterprise Multi-Agent Platform API on behalf of the signed-in user.",
+      "adminConsentDisplayName": "Access the platform API as the user",
+      "isEnabled": true,
+      "type": "User",
+      "userConsentDescription": "Allows the app to access the Enterprise Multi-Agent Platform API on your behalf.",
+      "userConsentDisplayName": "Access the platform API as you",
+      "value": "access_as_user"
+    }
+  ]
+}
