@@ -1,0 +1,66 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Multi-Agent Platform API",
+    "description": "Custom connector for Copilot Studio / Power Platform to call the platform's Semantic Kernel agent through APIM.",
+    "version": "1.0.0"
+  },
+  "host": "<APIM_HOSTNAME>",
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/agent/chat": {
+      "post": {
+        "summary": "Ask the platform agent a question",
+        "description": "Calls the Semantic Kernel agent (Admin or Agent.User role required).",
+        "operationId": "AgentChat",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": ["message"],
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "The question or instruction to send to the agent."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent reply",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "reply": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "oauth2-aad": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://login.microsoftonline.com/common/oauth2/authorize",
+      "tokenUrl": "https://login.microsoftonline.com/common/oauth2/token",
+      "scopes": {}
+    }
+  },
+  "security": [
+    {
+      "oauth2-aad": []
+    }
+  ]
+}

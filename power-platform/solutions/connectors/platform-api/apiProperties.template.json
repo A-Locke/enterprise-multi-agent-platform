@@ -1,0 +1,54 @@
+{
+  "properties": {
+    "connectionParameters": {
+      "token": {
+        "type": "oauthSetting",
+        "oAuthSettings": {
+          "identityProvider": "aad",
+          "clientId": "<AZURE_API_APP_CLIENT_ID>",
+          "scopes": [
+            "api://<AZURE_API_APP_CLIENT_ID>/access_as_user"
+          ],
+          "redirectMode": "Global",
+          "redirectUrl": "https://global.consent.azure-apim.net/redirect",
+          "properties": {
+            "IsFirstParty": "False",
+            "AzureActiveDirectoryResourceId": "api://<AZURE_API_APP_CLIENT_ID>",
+            "IsOnbehalfofLoginSupported": true
+          },
+          "customParameters": {
+            "loginUri": {
+              "value": "https://login.windows.net"
+            },
+            "tenantId": {
+              "value": "<AZURE_TENANT_ID>"
+            },
+            "resourceUri": {
+              "value": "api://<AZURE_API_APP_CLIENT_ID>"
+            },
+            "enableOnbehalfOfLogin": {
+              "value": "false"
+            }
+          }
+        }
+      },
+      "token:TenantId": {
+        "type": "string",
+        "metadata": {
+          "sourceType": "AzureActiveDirectoryTenant"
+        },
+        "uiDefinition": {
+          "constraints": {
+            "required": "false",
+            "hidden": "true"
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#007ee5",
+    "capabilities": [],
+    "scriptOperations": null,
+    "publisher": "Enterprise Multi-Agent Platform",
+    "stackOwner": "Enterprise Multi-Agent Platform"
+  }
+}

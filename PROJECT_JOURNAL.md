@@ -161,3 +161,31 @@ Azure OpenAI resource + `gpt-5-mini` deployment, Semantic Kernel orchestration (
 ### Next steps
 
 - Milestone 3: Copilot Studio agent (low-code conversational layer), generative orchestration, custom action wired to the APIM-fronted backend (custom-engine-agent pattern), published to Teams/web.
+
+---
+
+## Milestone 3 — Copilot Studio Agent
+
+**Status:** in progress (prep work done, portal authoring not started)
+**Date started:** 2026-08-04
+
+### Prep work: custom connector, automated as far as it goes
+
+Unlike M0-M2, this milestone is genuinely maker-portal-only for the actual agent authoring (`manual-setup.md` #5) — no CLI/Bicep surface exists for that. Split the work: automate everything that can be, document precisely what can't.
+
+**Design decision (ADR-0006):** the connector needs to call the API *as the signed-in user*, not as a generic service identity, or the per-user App Role authorization built in Milestone 1 gets bypassed rather than extended through Copilot Studio. That means OAuth 2.0 delegated auth on the connector — whose conventional setup wants a client secret, which would have been the first stored secret anywhere in this project. Found and used the newer alternative instead: managed identity + federated credential on the connector, same pattern already planned for GitHub-Azure OIDC, applied to a second trust relationship. Reused the existing API app registration rather than creating a new one — the managed-identity path doesn't need the public/confidential client split a secret-based setup would have pushed toward.
+
+**Automated:** a Power Platform custom connector (`power-platform/solutions/connectors/platform-api/`) describing `/agent/chat`, created via `pac connector create`. Templated with placeholders (`<AZURE_API_APP_CLIENT_ID>`, `<APIM_HOSTNAME>`, etc.) rather than committing real values, consistent with the rest of the repo — `scripts/setup-copilot-connector.ps1` generates the real (gitignored) files from the templates and calls `pac`. Verified live via `pac connector list`.
+
+Two small `pac` friction points along the way, both quick fixes: `pac connector create` rejects combining `--settings-file` with the individual `--api-definition-file`/`--api-properties-file` flags (use one or the other, not both — `settings.json` already references the other files by relative path); and the Swagger `info.title` has an undocumented 30-character limit, rejected with a generic error until trimmed.
+
+### Remaining manual step (documented, not yet done)
+
+Switching the connector's auth from client-secret (the default) to managed identity is a portal-only toggle with no CLI equivalent found — `manual-setup.md` #9. Once done, the resulting redirect URL + issuer + subject identifier get scripted into the Entra app registration (`az ad app update` for the redirect URI, `az ad app federated-credential create` for the trust) — those two calls are ready to run as soon as the values exist, just not before.
+
+### Next steps
+
+- User completes `manual-setup.md` #9 (managed-identity toggle in the portal).
+- Wire the resulting redirect URI + federated credential into the app registration.
+- Create and test a Connection.
+- Author the actual Copilot Studio agent (topics, generative orchestration, wiring this connector as a custom action), publish to a demo channel.

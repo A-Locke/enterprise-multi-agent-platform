@@ -30,3 +30,9 @@ Thumbs.db
 # Secrets — never commit real values
 *.env
 !.env.example
+
+# Generated from power-platform/solutions/connectors/*/*.template.json -- contains real
+# client IDs/tenant ID/APIM hostname. Templates (*.template.json) are committed; these
+# generated files are not.
+power-platform/solutions/connectors/*/apiDefinition.json
+power-platform/solutions/connectors/*/apiProperties.json
