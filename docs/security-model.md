@@ -1,7 +1,7 @@
 # Security Model
 
-Living document — grows with each milestone. Current state reflects Milestone 1
-(Identity & Access); items marked *planned* land in later milestones.
+Living document — grows with each milestone. Current state reflects Milestone 2
+(Core Orchestration); items marked *planned* land in later milestones.
 
 ## Identity
 
@@ -11,9 +11,13 @@ Single Microsoft Entra ID tenant hosts both Azure resources and Power Platform/D
 Two categories of principal exist today:
 - **Human users**, authenticating interactively (device-code flow today; authorization-code
   + PKCE for any future browser client).
-- **Workload identities** *(planned, Milestone 2+)*: Azure resources (Container Apps calling
-  Key Vault/ACR, Functions calling AI Search, etc.) use **managed identities**, never
-  connection strings or client secrets, per ADR-0001's security-first default.
+- **Workload identities**: the API's Container App uses a **system-assigned managed
+  identity** for both of its Azure dependencies — `AcrPull` on the Container Registry (image
+  pulls) and `Cognitive Services OpenAI User` on the Azure OpenAI resource (chat completions).
+  Locally, the same code path authenticates via the developer's own `az login` session
+  (`DefaultAzureCredential`'s fallback chain) — no separate cloud/local auth branches to
+  maintain, and no API keys anywhere: the OpenAI resource has `disableLocalAuth: true`, so
+  key-based auth isn't even a configuration option that exists to misuse.
 
 No client secrets exist anywhere in this project's Entra app registrations — the API's
 registration (`infra/entra/`) is a public client (device-code / PKCE flows only), and
@@ -55,6 +59,14 @@ tests (`apps/api/tests/test_auth.py`) cover: missing token (401), wrong audience
 expired token (401), valid token without the required role (403), and valid token with the
 required role (200) — not just the happy path.
 
+## Agent orchestration (Milestone 2)
+
+The `/agent/chat` endpoint (Semantic Kernel, `apps/api/app/agent.py`) requires `Admin` or
+`Agent.User` — see [`docs/diagrams/agent-chat-sequence.md`](diagrams/agent-chat-sequence.md)
+for the full request path from client through APIM to Azure OpenAI. Same token-validation
+and RBAC enforcement as every other route; the only new element is the API's own outbound
+call to Azure OpenAI, which is itself managed-identity-authenticated (see Identity, above).
+
 ## Secrets and configuration
 
 - **Local development**: real values live only in `.env` (gitignored), never in source,
@@ -68,13 +80,15 @@ required role (200) — not just the happy path.
 
 ## Network and transport
 
-- All Azure endpoints are HTTPS-only by default (Key Vault, APIM, Container Apps, Dataverse).
-- APIM sits in front of the API as the single ingress point *(policies — rate limiting, IP
-  restrictions, further auth enforcement — configured starting Milestone 2 once there's a
-  backend for APIM to front)*.
-- Public network access is currently `Enabled` on Key Vault/ACR for development simplicity
-  (documented trade-off, not an oversight); revisit with Private Link if this moved toward a
-  production posture.
+- All Azure endpoints are HTTPS-only by default (Key Vault, APIM, Container Apps, Dataverse,
+  Azure OpenAI).
+- APIM sits in front of the API as the single ingress point, forwarding to the Container App
+  via a `set-backend-service` passthrough policy (`infra/modules/apim-api.bicep`). Per-route
+  policies (rate limiting, IP restrictions, request/response transformation) attach here in a
+  later milestone if a concrete need appears — not needed yet with a single backend.
+- Public network access is currently `Enabled` on Key Vault/ACR/Azure OpenAI for development
+  simplicity (documented trade-off, not an oversight); revisit with Private Link if this
+  moved toward a production posture.
 
 ## Data protection
 
@@ -103,4 +117,8 @@ required role (200) — not just the happy path.
   as standing access, not just-in-time. Acceptable for a two-person portfolio sandbox;
   would be a real recommendation for a production engagement.
 - Dataverse security roles not yet created (see above — deferred to Milestone 7 by design).
-- APIM has no policies configured yet (auth is enforced entirely at the API layer for now).
+- APIM runs a single passthrough policy; no per-route rate limiting, IP filtering, or
+  transformation yet — authorization is enforced entirely at the API layer for now.
+- Azure OpenAI content moderation relies on the platform default (`raiPolicyName:
+  Microsoft.Default`) — Azure AI Content Safety as a dedicated evaluated layer is still
+  planned, not implemented.

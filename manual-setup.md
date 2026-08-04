@@ -50,11 +50,21 @@ gh auth login   # already done for this environment
 
 **Action:** confirm model availability/quota in the target region before running the Bicep deployment that requests a model deployment; request additional quota via the Azure portal if the default is insufficient.
 
+**Resolved for Milestone 2 as follows:** two real gates hit in practice, both worth checking before assuming a model deployment will succeed:
+1. `az cognitiveservices model list --location <region>` can list a model/version that's actually in `lifecycleStatus: Deprecating` and rejected for new deployments (`gpt-4.1-mini` version `2025-04-14` hit this) — check `lifecycleStatus`, not just presence in the list.
+2. Even a `GenerallyAvailable` model can have **zero default quota** on a specific SKU. Check with `az cognitiveservices usage list --location <region>` before deploying — e.g. this subscription had 0 quota for `gpt-5-mini` under `DataZoneStandard` (EU data residency) but 500 under `GlobalStandard`. If your compliance requirements need `DataZoneStandard` specifically and the quota is 0, that's the one genuinely manual step here: request a quota increase via the Azure portal (Quotas → Azure OpenAI).
+
 ## 7. GitHub↔Azure OIDC trust verification
 
 **Manual because:** `azd pipeline config` automates creation of the federated credential and GitHub secrets/variables, but a final human check that the federated credential's subject claim matches the actual repository/environment/branch is worth doing once, since a mismatch fails silently as an auth error during CI rather than at setup time.
 
 **Action:** after `azd pipeline config` runs, verify the federated credential subject in the Entra app registration matches `repo:<org>/<repo>:ref:refs/heads/main` (or the configured environment).
+
+## 8. Container image builds require a local Docker daemon
+
+**Manual because:** `azd deploy`'s remote-build option (ACR Tasks, server-side build with no local Docker needed) is disabled on this subscription entirely — `TasksOperationsNotAllowed`, a platform restriction with no config workaround (Microsoft's own suggestion is to file a support request). Local Docker build is the fallback, which needs Docker Desktop actually running, not just installed.
+
+**Action:** before `azd deploy`, ensure Docker Desktop is running (`docker info` succeeds). CI runners (GitHub-hosted) have Docker available by default, so this is a local-machine-only concern, not a CI blocker.
 
 ---
 

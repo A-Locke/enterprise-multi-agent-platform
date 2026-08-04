@@ -7,9 +7,17 @@ infra:
   path: infra
   module: main
 
-# Services are added incrementally as each milestone lands (see PROJECT_JOURNAL.md).
-# services:
-#   api:
-#     project: ./apps/api
-#     language: python
-#     host: containerapp
+services:
+  api:
+    project: ./apps/api
+    language: python
+    host: containerapp
+    docker:
+      path: Dockerfile
+      # remoteBuild (ACR Tasks) was tried first to avoid depending on a running local
+      # Docker daemon, but this subscription has ACR Tasks disabled entirely
+      # (TasksOperationsNotAllowed -- a platform restriction, not something fixable via
+      # config; see PROJECT_JOURNAL.md). Local Docker build is the fallback; CI will need
+      # Docker available on the runner (GitHub-hosted runners have it by default).
+
+# Further services (functions, web) are added as later milestones land.

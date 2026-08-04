@@ -28,7 +28,7 @@ The $200 Azure credit is expected to cover essentially all Azure spend across th
 | Azure Container Registry (Basic) | None | ~$5/month flat | **Now the preferred choice over GitHub Container Registry** — genuinely Azure-native (managed identity pull auth into Container Apps, no PAT to manage), and ~$5/month is trivial against the $200 credit. See ADR-0002. |
 | Azure Functions (Consumption) | 1,000,000 executions + 400,000 GB-s/month free | $0 | Comfortably covers ingestion pipeline / connector backends |
 | Azure AI Search | Free (F0) tier: 50 MB storage, 3 indexes, no SLA | $0 | Sufficient for the RAG demo corpus; Basic tier (~$75/month) not needed |
-| Azure AI Foundry / Azure OpenAI | No free tier; pay-per-token (GPT-4o ≈ $2.50/$10 per 1M input/output tokens) | Usage-driven | Covered by the $200 credit at dev/demo volume; use a cheaper model (e.g. GPT-4o-mini) for iteration to stretch it further |
+| Azure OpenAI (bare resource, per ADR-0005) | No free tier; pay-per-token. Deployed `gpt-5-mini` (`GlobalStandard` SKU — see below) | Usage-driven | Covered by the $200 credit at dev/demo volume; `gpt-5-mini` chosen specifically as the cost-efficient tier for iteration |
 | Azure Service Bus (Basic tier) | No base cost, $0.05/million operations | $0 | Zero monthly floor |
 | Azure Static Web Apps (Free plan) | 100 GB bandwidth/month, free custom domain + SSL | $0 | Only relevant if `/apps/web` ends up needed after the Power Apps evaluation |
 | Azure Cost Management | Budgets/alerts | $0 | Guardrail against the credit running out mid-build, not a one-time estimate |
@@ -50,6 +50,21 @@ The $200 Azure credit is expected to cover essentially all Azure spend across th
 
 - Azure Cost Management budget scoped to `rg-<env>` (and ideally the subscription, to also catch spend outside the resource group), monthly reset, alert thresholds at 50%/75%/90%/100% of $180 (90% of the $200 credit) — set up via Bicep (`Microsoft.Consumption/budgets`).
 - No equivalent spend-alerting exists for Power Platform/Copilot Studio consumption; monitor Copilot Studio's Analytics tab manually.
+
+## Milestone 2 addition: model deployment gotchas
+
+Provisioning the Azure OpenAI model deployment surfaced two things worth knowing before
+picking a model/SKU combination, beyond just checking the price:
+
+1. A model/version can appear in `az cognitiveservices model list` while being in
+   `lifecycleStatus: Deprecating` and rejected for new deployments — check that field, not
+   just presence in the catalog.
+2. Default quota varies by SKU independently of price. This subscription had **0** default
+   quota for `gpt-5-mini` under `DataZoneStandard` (EU-only data residency) but **500** under
+   `GlobalStandard` (no processing-region guarantee) — same model, same per-token price,
+   different quota. Used `GlobalStandard` since this portfolio project has no real
+   compliance requirement forcing EU-only processing; see `manual-setup.md` #6 and
+   [ADR-0005](adr/0005-azure-openai-over-ai-foundry.md) for the full trade-off.
 
 ## Caveats
 

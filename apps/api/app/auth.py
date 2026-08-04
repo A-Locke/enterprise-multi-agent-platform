@@ -55,11 +55,18 @@ def get_current_user(request: Request) -> dict:
 
 def require_role(role: str) -> Callable[..., dict]:
     """Dependency factory: authenticate, then require `role` in the token's roles claim."""
+    return require_any_role(role)
+
+
+def require_any_role(*roles: str) -> Callable[..., dict]:
+    """Dependency factory: authenticate, then require at least one of `roles`."""
 
     def _dependency(claims: dict = Depends(get_current_user)) -> dict:
-        if role not in claims.get("roles", []):
+        token_roles = claims.get("roles", [])
+        if not any(role in token_roles for role in roles):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=f"Requires role: {role}"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires one of roles: {', '.join(roles)}",
             )
         return claims
 

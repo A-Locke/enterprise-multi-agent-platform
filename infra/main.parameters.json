@@ -16,6 +16,15 @@
     },
     "budgetNotificationEmail": {
       "value": "${BUDGET_NOTIFICATION_EMAIL}"
+    },
+    "tenantId": {
+      "value": "${AZURE_TENANT_ID}"
+    },
+    "apiClientId": {
+      "value": "${AZURE_API_APP_CLIENT_ID}"
+    },
+    "localDevPrincipalId": {
+      "value": "${LOCAL_DEV_PRINCIPAL_ID}"
     }
   }
 }

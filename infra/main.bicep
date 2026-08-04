@@ -24,6 +24,15 @@ param apimPublisherName string
 @description('Email address for cost budget threshold alerts. Environment-driven — set via azd env / parameters file, no hardcoded default.')
 param budgetNotificationEmail string
 
+@description('Microsoft Entra tenant ID (also used for local az login context).')
+param tenantId string
+
+@description('Entra app registration client ID protecting the API (from scripts/setup-entra-app.ps1).')
+param apiClientId string
+
+@description('Object ID of the local dev principal, granted Cognitive Services OpenAI User for local testing. Empty to skip.')
+param localDevPrincipalId string = ''
+
 // Short, deterministic suffix so resource names stay unique without becoming unreadable.
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var resourceGroupName = 'rg-${environmentName}'
@@ -85,6 +94,68 @@ module budget './modules/budget.bicep' = {
   }
 }
 
+module ai './modules/ai.bicep' = {
+  name: 'ai'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    resourceToken: resourceToken
+    localDevPrincipalId: localDevPrincipalId
+  }
+}
+
+module containerAppsEnv './modules/container-apps-env.bicep' = {
+  name: 'container-apps-env'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    resourceToken: resourceToken
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+  }
+}
+
+module containerAppApi './modules/container-app-api.bicep' = {
+  name: 'container-app-api'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    resourceToken: resourceToken
+    containerAppsEnvironmentId: containerAppsEnv.outputs.id
+    acrLoginServer: containerRegistry.outputs.loginServer
+    acrResourceId: containerRegistry.outputs.resourceId
+    tenantId: tenantId
+    apiClientId: apiClientId
+    openAiEndpoint: ai.outputs.endpoint
+    openAiDeploymentName: ai.outputs.deploymentName
+  }
+}
+
+// Container App -> Azure OpenAI RBAC, as its own module (not inside ai.bicep) to avoid a
+// circular module dependency: containerApp needs ai's outputs (endpoint), and this
+// assignment needs containerApp's output (principalId). Subscription-scope files can't
+// declare resource-group-scoped resources directly, even via `existing` -- must be a module.
+module containerAppOpenAiRbac './modules/ai-rbac.bicep' = {
+  name: 'container-app-openai-rbac'
+  scope: rg
+  params: {
+    openAiName: ai.outputs.name
+    principalId: containerAppApi.outputs.principalId
+    roleDefinitionId: ai.outputs.cognitiveServicesOpenAiUserRoleId
+  }
+}
+
+module apimApi './modules/apim-api.bicep' = {
+  name: 'apim-api'
+  scope: rg
+  params: {
+    apimName: apim.outputs.name
+    containerAppFqdn: containerAppApi.outputs.fqdn
+  }
+}
+
 output RESOURCE_GROUP_NAME string = rg.name
 output LOG_ANALYTICS_WORKSPACE_ID string = logAnalytics.outputs.workspaceId
 output KEY_VAULT_NAME string = keyVault.outputs.name
@@ -93,3 +164,10 @@ output APIM_NAME string = apim.outputs.name
 output APIM_GATEWAY_URL string = apim.outputs.gatewayUrl
 output ACR_NAME string = containerRegistry.outputs.name
 output ACR_LOGIN_SERVER string = containerRegistry.outputs.loginServer
+output AZURE_OPENAI_NAME string = ai.outputs.name
+output AZURE_OPENAI_ENDPOINT string = ai.outputs.endpoint
+output AZURE_OPENAI_DEPLOYMENT_NAME string = ai.outputs.deploymentName
+output CONTAINER_APPS_ENVIRONMENT_NAME string = containerAppsEnv.outputs.name
+output CONTAINER_APP_API_NAME string = containerAppApi.outputs.name
+output CONTAINER_APP_API_FQDN string = containerAppApi.outputs.fqdn
+output APIM_API_PATH string = apimApi.outputs.apiPath

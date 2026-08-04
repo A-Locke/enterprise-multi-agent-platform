@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Milestone 1 end-to-end auth demo: signs in via the OAuth2 device-code flow and
-    calls the local API's /me and /admin/ping endpoints to show role-gated access.
+    Auth + agent demo: signs in via the OAuth2 device-code flow, then calls /me,
+    /admin/ping, and /agent/chat to show role-gated access and the Semantic Kernel agent.
 .DESCRIPTION
-    Requires the API running locally (see apps/api/README.md). Implements the device
-    code flow directly via REST calls (no MSAL SDK dependency) per
+    Requires the API running locally (see apps/api/README.md) or point -ApiBaseUrl at the
+    APIM gateway / Container App FQDN for the deployed version. Implements the device code
+    flow directly via REST calls (no MSAL SDK dependency) per
     https://learn.microsoft.com/entra/identity-platform/v2-oauth2-device-code
 #>
 param(
@@ -83,4 +84,16 @@ try {
 } catch {
     $status = $_.Exception.Response.StatusCode.value__
     Write-Host "Request failed with HTTP $status (expected 403 if this user lacks the Admin role)." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "POST /agent/chat" -ForegroundColor Cyan
+try {
+    $body = @{ message = "In one sentence, what are you?" } | ConvertTo-Json
+    Invoke-RestMethod -Method POST -Uri "$ApiBaseUrl/agent/chat" `
+        -Headers @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" } `
+        -Body $body | ConvertTo-Json
+} catch {
+    $status = $_.Exception.Response.StatusCode.value__
+    Write-Host "Request failed with HTTP $status (expected 403 if this user lacks Admin/Agent.User)." -ForegroundColor Yellow
 }

@@ -2,7 +2,30 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 2: Core Orchestration
+## [Unreleased] — Milestone 3: Copilot Studio Agent
+
+## [Milestone 2] — 2026-08-04 — Core Orchestration
+
+### Added
+- ADR-0005: bare Azure OpenAI resource (`kind: 'OpenAI'`) over a full Azure AI Foundry project — nothing at this milestone's scope needs Foundry's added surface; the upgrade path is reversible.
+- `infra/modules/ai.bicep`: Azure OpenAI resource + `gpt-5-mini` deployment (`GlobalStandard` SKU), `disableLocalAuth: true`, RBAC-only access (`Cognitive Services OpenAI User`).
+- `infra/modules/container-apps-env.bicep`, `container-app-api.bicep`: Container Apps environment + the API's Container App, system-assigned managed identity, `AcrPull` + `Cognitive Services OpenAI User` RBAC.
+- `infra/modules/apim-api.bicep`: APIM wired to the Container App via a passthrough backend/policy.
+- `apps/api/app/agent.py`, `routers/agent.py`: Semantic Kernel orchestration, `POST /agent/chat` (requires `Admin` or `Agent.User`), authenticated to Azure OpenAI via managed identity — no API keys anywhere.
+- `apps/api/Dockerfile`, `azure.yaml` `services.api`: containerization and `azd deploy` wiring.
+- `docs/diagrams/agent-chat-sequence.md`: sequence diagram for the full agent request path.
+- 4 new tests (`tests/test_agent.py`) — 11 total, Semantic Kernel call mocked, no real Azure calls in CI.
+
+### Fixed
+- `gpt-4.1-mini` (version `2025-04-14`) was listed in the region's model catalog but rejected at deploy time (`ServiceModelDeprecating`) — catalog presence doesn't imply deployability; switched to `gpt-5-mini` and started checking `lifecycleStatus` explicitly.
+- `gpt-5-mini` had zero default quota under `DataZoneStandard` (EU-only residency) but 500 under `GlobalStandard` on this subscription — switched SKU, documented as a real trade-off (ADR-0005), not a silent substitution.
+- Container App stuck in a failed state after "Operation expired" on first provision — deleting and letting Bicep recreate it resolved it.
+- ACR Tasks (remote build) disabled entirely on this subscription — fell back to local Docker build.
+- Chicken-and-egg on the Container App's ACR `registries` block (referencing a managed identity that didn't exist yet in the same deployment) — resolved by omitting it on first provision, adding it back once `AcrPull` RBAC existed and settled.
+- APIM `method: '*'` is not a real wildcard — silently matched nothing, every request 404'd at the gateway. Needed one explicit operation per HTTP method.
+
+### Verified
+- End-to-end through the live APIM gateway with a real Entra ID token: `/me`, `/admin/ping`, and `/agent/chat` all correct, including a real generated reply from `gpt-5-mini`. Unauthenticated requests to protected routes correctly return `401` at the deployed edge, not just locally.
 
 ## [Milestone 1] — 2026-08-04 — Identity & Access
 

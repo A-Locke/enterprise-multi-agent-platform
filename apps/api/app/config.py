@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     azure_tenant_id: str
     azure_api_app_client_id: str
+    azure_openai_endpoint: str
+    azure_openai_deployment_name: str
 
     @property
     def issuer(self) -> str:

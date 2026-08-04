@@ -116,3 +116,48 @@ Verified end-to-end against a real Entra ID token: `GET /me` returned the correc
 ### Next steps
 
 - Milestone 2: Azure AI Foundry project + model deployment, Semantic Kernel service behind APIM, one working custom agent end-to-end.
+
+---
+
+## Milestone 2 — Core Orchestration
+
+**Status:** complete
+**Date:** 2026-08-04
+
+### Decisions
+
+- **ADR-0005**: bare Azure OpenAI resource (`kind: 'OpenAI'`) over a full Azure AI Foundry project, per the "evaluate, don't mandate" framing set in ADR-0004. Nothing at this milestone's scope (one orchestrator, one model) needs Foundry's added surface (multi-project governance, Agent Service, evaluation tooling); the upgrade path (`kind: 'AIServices'` + `allowProjectManagement: true`) is reversible and preserves the resource, so choosing simple now doesn't foreclose richer later.
+- Authentication to Azure OpenAI is Entra ID RBAC only (`Cognitive Services OpenAI User`, `disableLocalAuth: true` on the resource) — no API keys exist as a configuration option, not just "unused." Same managed-identity pattern extended to ACR pulls for the Container App.
+
+### Model selection: two real gates, not just a price check
+
+First attempt (`gpt-4.1-mini`, version `2025-04-14`) was listed in `az cognitiveservices model list` for the target region but rejected at deploy time: `ServiceModelDeprecating`. The catalog listing doesn't surface deprecation status by default — checking `lifecycleStatus` per entry (not just presence) is what actually confirms deployability.
+
+Switched to `gpt-5-mini` (`lifecycleStatus: GenerallyAvailable`), which then hit a second, different gate: zero default quota under `DataZoneStandard` (EU-only data residency), confirmed via `az cognitiveservices usage list`. `GlobalStandard` had 500 quota available on the same subscription for the same model. Used `GlobalStandard`, documented as a real trade-off (no EU-only processing guarantee) rather than a silent substitution — a production engagement with an actual EU-residency requirement would request the `DataZoneStandard` quota increase instead (portal-only, `manual-setup.md` #6).
+
+### Deployment troubleshooting: four distinct issues, one deployment
+
+Getting the Container App from "provisioned" to "actually serving traffic" surfaced a sequence of real, independent problems — worth recording distinctly since each had a different root cause and would mislead if conflated:
+
+1. **Container App stuck failing with "Operation expired"** on the very first `azd provision`, even using a public placeholder image. Root cause never fully confirmed, but deleting the failed resource and letting Bicep recreate it from scratch resolved it cleanly on retry — consistent with a corrupted first-attempt resource state rather than a config error.
+2. **`azd deploy`'s remote build (ACR Tasks) is disabled on this subscription entirely** (`TasksOperationsNotAllowed` — a platform restriction, not a config fix). Fell back to local Docker build, which meant starting Docker Desktop (installed but not running) before `azd deploy` could proceed.
+3. **Chicken-and-egg on the ACR `registries` block**: configuring registry pull auth via the Container App's own not-yet-existent managed identity, in the same deployment that creates both, meant the registry validation had nothing to authenticate with yet. Resolved by leaving the `registries` block out of the *first* provision (safe, since the placeholder image is public and needs no registry) and adding it back once the `AcrPull` role assignment existed and had settled — confirmed by a clean second provision and a successful real-image pull.
+4. **APIM operations silently matched nothing**: `method: '*'` is not a real wildcard in Azure API Management — every request 404'd at the gateway with a generic "Resource not found" despite the API and operation both existing and looking correctly configured. Needed one explicit operation per HTTP method (GET/POST/PUT/PATCH/DELETE), each with `urlTemplate: '/{*path}'`.
+
+**Lesson across all four:** several of these produced *plausible-looking but wrong* diagnoses at first glance (the APIM 404 looked like a routing/path bug; the Container App failure looked like an ACR-permissions timing bug). What actually resolved each was checking ground truth directly — `az role assignment list`, `az apim api operation list`, `az containerapp revision list` — rather than reasoning from the error message alone. The one theory that turned out to be wrong (ACR registry validation blocking on RBAC propagation) was abandoned only after the fix didn't work and a different, correct fix was found — worth not being precious about an early hypothesis once evidence stops supporting it.
+
+### Verified end-to-end (2026-08-04)
+
+Confirmed independently, not just claimed:
+- `GET /health` through the deployed Container App directly → `200`.
+- `GET /health` through the APIM gateway (`/api/health`) → `200`.
+- `GET /me` and `POST /agent/chat` through APIM **without** a token → `401` (auth enforced at the real deployed edge, not just locally).
+- Full flow with a real Entra ID token through APIM: `/me` returned correct claims, `/admin/ping` returned `200`, and `/agent/chat` returned a real, coherent reply generated by `gpt-5-mini` via Semantic Kernel — the actual "one working agent end-to-end" goal of this milestone.
+
+### Delivered
+
+Azure OpenAI resource + `gpt-5-mini` deployment, Semantic Kernel orchestration (`apps/api/app/agent.py`) with managed-identity auth, Container Apps environment + Container App (system-assigned identity, `AcrPull` + `Cognitive Services OpenAI User` RBAC), APIM wired to the Container App with per-method passthrough operations, Dockerfile + `azure.yaml` service definition, 11 passing automated tests (agent chat mocked, no real Azure calls in CI), updated security model docs and a new agent-chat sequence diagram, and a live, independently-verified end-to-end path from a real token to a real model response.
+
+### Next steps
+
+- Milestone 3: Copilot Studio agent (low-code conversational layer), generative orchestration, custom action wired to the APIM-fronted backend (custom-engine-agent pattern), published to Teams/web.
