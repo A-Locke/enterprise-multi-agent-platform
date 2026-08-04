@@ -54,6 +54,23 @@ if (-not $spId) {
     Write-Host "Service principal already exists: $spId" -ForegroundColor Yellow
 }
 
+# Power Platform's OAuth broker for custom connectors (AAD identity provider) redirects
+# through its own fixed endpoint, not a per-connector one -- without it registered as a
+# reply URL, interactive sign-in fails outright with AADSTS500113 ("No reply address is
+# registered"). --web-redirect-uris replaces the whole list, so read-merge-write rather
+# than overwrite (a connector-specific redirect URI gets added here too, later, once the
+# connector switches to managed-identity auth per ADR-0006).
+$powerPlatformRedirectUri = "https://global.consent.azure-apim.net/redirect"
+Write-Host "Ensuring Power Platform connector redirect URI is registered..." -ForegroundColor Cyan
+$existingRedirectUris = az ad app show --id $appId --query "web.redirectUris" -o json | ConvertFrom-Json
+if ($existingRedirectUris -contains $powerPlatformRedirectUri) {
+    Write-Host "Already present - skipping." -ForegroundColor Yellow
+} else {
+    $newRedirectUris = @($existingRedirectUris) + $powerPlatformRedirectUri
+    az ad app update --id $appId --web-redirect-uris $newRedirectUris | Out-Null
+    Write-Host "Added." -ForegroundColor Green
+}
+
 # Microsoft Graph "Sign in and read user profile" (User.Read) -- not added by default when
 # an app is created via `az ad app create` (unlike portal-created apps, which get it
 # automatically). Without it, Entra's consent screen has nothing to show the user and the

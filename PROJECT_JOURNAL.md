@@ -231,6 +231,20 @@ scope `e1fe6dd8-ba31-4d61-89e7-88639da4683d` / `User.Read`) followed by `az ad a
 grant --scope User.Read`. Folded into `scripts/setup-entra-app.ps1` as a third idempotent
 block, re-ran the script to confirm all three checks now skip cleanly on a second pass.
 
+### Fourth bug: no reply address registered
+
+Past the consent screen, sign-in failed with `AADSTS500113: No reply address is registered
+for the application.` `az ad app show --query web.redirectUris` confirmed the list was
+empty — unsurprising, since this app registration started life purely as an API resource,
+never as an OAuth client with a UI to redirect back to. Power Platform's custom-connector
+OAuth broker (AAD identity provider) redirects through a fixed, documented Microsoft
+endpoint regardless of which connector or tenant is involved:
+`https://global.consent.azure-apim.net/redirect`. Registered it as a reply URL via `az ad app
+update --web-redirect-uris`. Folded into `scripts/setup-entra-app.ps1` as a fourth idempotent
+block — read-merge-write rather than a blind overwrite, since `--web-redirect-uris` replaces
+the entire list and a second, connector-specific redirect URI is still expected to land here
+later once the connector switches to managed-identity auth (ADR-0006, `manual-setup.md` #9).
+
 ### Next steps
 
 - User completes `manual-setup.md` #9 (managed-identity toggle in the portal) with the corrected connector.
