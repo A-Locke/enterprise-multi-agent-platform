@@ -1,0 +1,41 @@
+#!/bin/sh
+# Blocks commits that contain real values from .env (subscription/tenant IDs,
+# emails, environment URLs, etc.) -- a technical backstop, not just a reminder.
+# Reads .env fresh every run, so it adapts automatically as values are added.
+# Installed via: git config core.hooksPath .githooks (done by scripts/load-env.ps1)
+
+repo_root=$(git rev-parse --show-toplevel)
+env_file="$repo_root/.env"
+
+if [ ! -f "$env_file" ]; then
+  exit 0
+fi
+
+staged_diff=$(git diff --cached)
+found=0
+
+while IFS='=' read -r key value; do
+  case "$key" in
+    ''|'#'*) continue ;;
+  esac
+  # Trim whitespace/CR
+  value=$(printf '%s' "$value" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  # Skip empty/placeholder/short values (avoid false positives on things like "dev")
+  if [ -z "$value" ] || [ ${#value} -lt 8 ]; then
+    continue
+  fi
+  if printf '%s' "$staged_diff" | grep -qF -- "$value"; then
+    echo "BLOCKED: staged changes contain a real value from .env (key: $key)"
+    found=1
+  fi
+done < "$env_file"
+
+if [ "$found" -eq 1 ]; then
+  echo ""
+  echo "Commit aborted. Replace real values with placeholders before committing"
+  echo "(see CLAUDE.md). If this is a false positive, review carefully before"
+  echo "using 'git commit --no-verify' to bypass."
+  exit 1
+fi
+
+exit 0
