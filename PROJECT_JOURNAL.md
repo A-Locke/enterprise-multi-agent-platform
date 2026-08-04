@@ -86,7 +86,19 @@ Milestone 0 is complete: repo scaffold, governing ADRs (0001–0004), local tool
 
 ### Progress so far
 
-- Entra ID app registration for the platform API, with App Roles (Admin, Agent.User, Auditor) and a delegated `access_as_user` scope, created via `scripts/setup-entra-app.ps1` — idempotent, also handles demo role assignments via Microsoft Graph.
+- Entra ID app registration for the platform API, with App Roles (Admin, Agent.User, Auditor) and a delegated `access_as_user` scope, created via `scripts/setup-entra-app.ps1` - idempotent, also handles demo role assignments via Microsoft Graph.
 - FastAPI backend (`apps/api`) validates Entra ID bearer tokens against the tenant JWKS (issuer + audience + signature) and enforces role-based authorization via the `roles` claim. 7 passing tests cover missing-token, wrong-role, wrong-audience, and expired-token cases.
 - `scripts/demo-auth.ps1` implements the OAuth2 device-code flow directly (no MSAL SDK dependency) for an end-to-end sign-in + API call demo.
 - Added `.githooks/pre-commit` as a defense-in-depth control: reads `.env` fresh on every commit and blocks it if the staged diff contains any real value from it, so local configuration values can never accidentally reach a commit. Self-installs via `scripts/load-env.ps1`.
+- `docs/security-model.md` and `docs/diagrams/auth-sequence.md`: security model documentation and a Mermaid sequence diagram for the end-to-end device-code auth flow.
+- CI: added a `test-api` job (ruff, mypy, pytest) to `.github/workflows/ci.yml`, running against `apps/api` on every PR.
+
+### Scoping decision - Dataverse security roles deferred to Milestone 7
+
+Attempted to create the Dataverse-side "Admin/Agent.User/Auditor" security roles to mirror the Entra App Roles, but the Global Admin account isn't a synced Dataverse user (`The user is not a member of the organization` when calling the Dataverse Web API), so this specifically needs the org user's token, which needs another interactive sign-in.
+
+Rather than push through that for a fairly low-value result right now: Dataverse security roles are fundamentally table-privilege sets, and no custom tables exist yet (that's Milestone 7's business-data-model work) - creating them now would mean empty, privilege-less role objects that get edited again later anyway. Deferred actual creation to Milestone 7, alongside the real data model they'd govern; fixed the role naming convention now (matching the Entra App Role values exactly) so the eventual mapping is unambiguous. Documented in `docs/security-model.md`.
+
+### Milestone 1 status
+
+Core identity/auth scaffolding, documentation, and CI are in place. Remaining before this milestone can be called complete: the user completing the interactive `scripts/demo-auth.ps1` sign-in to verify the auth flow end-to-end against a real token (not just the unit tests' synthetic ones).

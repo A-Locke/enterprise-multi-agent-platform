@@ -10,7 +10,7 @@
 $envFile = Join-Path $PSScriptRoot "..\.env"
 
 if (-not (Test-Path $envFile)) {
-    Write-Warning ".env not found at $envFile — copy .env.example to .env and fill in real values first."
+    Write-Warning ".env not found at $envFile - copy .env.example to .env and fill in real values first."
     return
 }
 

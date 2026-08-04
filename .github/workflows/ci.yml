@@ -24,9 +24,35 @@ jobs:
       - name: Bicep lint
         run: az bicep lint --file infra/main.bicep
 
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Mypy
+        run: mypy app
+
+      - name: Pytest
+        run: pytest -v
+
   # Added as each milestone introduces the corresponding app:
-  # - apps/api (pytest, ruff/mypy)
   # - apps/functions (pytest)
   # - apps/web (lint, type-check, unit tests)
   # - infra deploy validation (`az deployment sub what-if`) once OIDC federated
-  #   credentials are configured — see manual-setup.md #7.
+  #   credentials are configured - see manual-setup.md #7.

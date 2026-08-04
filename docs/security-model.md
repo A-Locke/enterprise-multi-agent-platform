@@ -1,0 +1,106 @@
+# Security Model
+
+Living document — grows with each milestone. Current state reflects Milestone 1
+(Identity & Access); items marked *planned* land in later milestones.
+
+## Identity
+
+Single Microsoft Entra ID tenant hosts both Azure resources and Power Platform/Dataverse
+(ADR-0004) — no cross-tenant identity federation needed for this project's scope.
+
+Two categories of principal exist today:
+- **Human users**, authenticating interactively (device-code flow today; authorization-code
+  + PKCE for any future browser client).
+- **Workload identities** *(planned, Milestone 2+)*: Azure resources (Container Apps calling
+  Key Vault/ACR, Functions calling AI Search, etc.) use **managed identities**, never
+  connection strings or client secrets, per ADR-0001's security-first default.
+
+No client secrets exist anywhere in this project's Entra app registrations — the API's
+registration (`infra/entra/`) is a public client (device-code / PKCE flows only), and
+service-to-service Azure calls use managed identity, which requires no stored credential at
+all.
+
+## Authorization: App Roles
+
+Three Entra ID App Roles, defined once in `infra/entra/app-roles.json` and provisioned via
+`scripts/setup-entra-app.ps1`:
+
+| Role | Value | Intent |
+|---|---|---|
+| Admin | `Admin` | Full administrative access: agent/tool configuration, user and role management, audit log access |
+| Agent User | `Agent.User` | Interact with agents, view own conversation history |
+| Auditor | `Auditor` | Read-only access to audit logs and configuration, for compliance review |
+
+These are enforced in the API (`apps/api/app/auth.py`) via the token's `roles` claim, not
+custom claims or a separate authorization service — see
+[`docs/diagrams/auth-sequence.md`](diagrams/auth-sequence.md) for the full request flow.
+
+**Dataverse mirroring:** the same three role names are planned as Dataverse security roles,
+created in Milestone 7 alongside the actual business-data tables they'd govern. Creating
+them now would mean empty, privilege-less role objects with nothing meaningful to attach —
+security roles in Dataverse are fundamentally table-privilege sets, and no custom tables
+exist yet. Deferring avoids doing the same work twice; the naming convention (`Admin`,
+`Agent.User`, `Auditor`) is fixed now specifically so the eventual mapping is unambiguous.
+
+## Token validation
+
+`apps/api/app/auth.py` validates, on every request:
+1. **Signature** — against the tenant's JWKS (`https://login.microsoftonline.com/<tenant>/discovery/v2.0/keys`), fetched and cached via `PyJWKClient`.
+2. **Issuer** — must match `https://login.microsoftonline.com/<tenant>/v2.0`.
+3. **Audience** — must match `api://<api-client-id>`.
+4. **Expiry** — standard JWT `exp` claim, enforced by `PyJWT`.
+
+Only after all four pass does the `roles` claim get checked for authorization. Automated
+tests (`apps/api/tests/test_auth.py`) cover: missing token (401), wrong audience (401),
+expired token (401), valid token without the required role (403), and valid token with the
+required role (200) — not just the happy path.
+
+## Secrets and configuration
+
+- **Local development**: real values live only in `.env` (gitignored), never in source,
+  config defaults, or documentation. Enforced by `.githooks/pre-commit`, which reads `.env`
+  fresh on every commit and blocks it if the staged diff contains any real value from it.
+- **Azure**: Key Vault (RBAC-authorized, purge protection on) holds any secret material that
+  can't be avoided entirely via managed identity. No secrets are hardcoded into Bicep — every
+  environment-specific value is a parameter sourced from `.env`/`azd env`.
+- **CI/CD** *(planned)*: GitHub↔Azure authentication via OIDC federated credentials
+  (`azd pipeline config`), not long-lived stored secrets — see `manual-setup.md` #7.
+
+## Network and transport
+
+- All Azure endpoints are HTTPS-only by default (Key Vault, APIM, Container Apps, Dataverse).
+- APIM sits in front of the API as the single ingress point *(policies — rate limiting, IP
+  restrictions, further auth enforcement — configured starting Milestone 2 once there's a
+  backend for APIM to front)*.
+- Public network access is currently `Enabled` on Key Vault/ACR for development simplicity
+  (documented trade-off, not an oversight); revisit with Private Link if this moved toward a
+  production posture.
+
+## Data protection
+
+- Key Vault: soft-delete + purge protection on (see `PROJECT_JOURNAL.md` Milestone 0 for why
+  purge protection specifically is now an Azure platform default, not optional).
+- Dataverse: encryption at rest is a Microsoft-managed platform default for all environments.
+- Azure AI Content Safety *(evaluate, per ADR-0001)* — not yet implemented; revisit once the
+  LLM-facing endpoints exist (Milestone 2+).
+
+## Auditing *(planned)*
+
+- Dataverse has built-in auditing (entity/record-level change tracking) — evaluate enabling
+  it directly rather than building custom audit logging, per the Microsoft Platform
+  Evaluation principle (ADR-0001).
+- Azure-side audit trail: Application Insights request/dependency logging (already live from
+  Milestone 0) plus Azure Activity Log for control-plane changes (RBAC, resource changes) —
+  no additional work needed, just needs to be surfaced in the eventual admin console
+  (Milestone 7).
+
+## Known limitations at this milestone
+
+- No Conditional Access / MFA policy configured on the Entra tenant (Entra ID Free tier
+  covers this project's needs; Conditional Access requires P1, out of scope for a $0-minded
+  portfolio build).
+- No Privileged Identity Management (PIM) — the demo users hold their App Role assignments
+  as standing access, not just-in-time. Acceptable for a two-person portfolio sandbox;
+  would be a real recommendation for a production engagement.
+- Dataverse security roles not yet created (see above — deferred to Milestone 7 by design).
+- APIM has no policies configured yet (auth is enforced entirely at the API layer for now).

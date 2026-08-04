@@ -9,6 +9,11 @@ All notable changes to this project are documented in this file. Format loosely 
 - `apps/api`: FastAPI backend validating Entra ID bearer tokens (issuer/audience/signature against tenant JWKS) with role-based authorization. 7 passing tests.
 - `scripts/demo-auth.ps1`: OAuth2 device-code flow demo (no MSAL dependency) for end-to-end auth verification.
 - `.githooks/pre-commit`: blocks commits containing real values from `.env`, self-installed via `scripts/load-env.ps1` — defense-in-depth so local configuration values can never accidentally reach a commit.
+- `docs/security-model.md` and `docs/diagrams/auth-sequence.md`: security model documentation and end-to-end auth sequence diagram.
+- CI: `test-api` job (ruff, mypy, pytest) added to `.github/workflows/ci.yml`.
+
+### Deferred
+- Dataverse security roles (Admin/Agent.User/Auditor mirroring the Entra App Roles) - creating them now would mean empty, privilege-less role objects since no custom Dataverse tables exist yet. Moved to Milestone 7, alongside the actual business-data model. See `PROJECT_JOURNAL.md`.
 
 ## [Milestone 0] — 2026-08-04 — Foundation
 
