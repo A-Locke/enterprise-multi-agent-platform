@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: enterprise-multi-agent-platform
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+# Services are added incrementally as each milestone lands (see PROJECT_JOURNAL.md).
+# services:
+#   api:
+#     project: ./apps/api
+#     language: python
+#     host: containerapp

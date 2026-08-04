@@ -1,0 +1,32 @@
+# azd environment (contains local env state; never commit)
+.azure/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Power Platform CLI
+.pac/
+
+# Editors / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Secrets — never commit real values
+*.env
+!.env.example
