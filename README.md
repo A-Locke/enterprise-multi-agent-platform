@@ -1,6 +1,6 @@
 # Enterprise Multi-Agent AI Platform
 
-A production-shaped, enterprise multi-agent AI platform built on the Microsoft stack: **Copilot Studio** for the conversational surface, **Semantic Kernel** for custom pro-code orchestration, **Power Platform** (Power Apps, Power Automate, Dataverse) for the low-code business layer, and **Azure** (AI Foundry/OpenAI, AI Search, APIM, Container Apps, Functions, Service Bus) for the pro-code backend — all provisioned as code.
+A production-shaped, enterprise multi-agent AI platform built on the Microsoft stack: **Copilot Studio** for the conversational surface, **Semantic Kernel** for custom pro-code orchestration, **Power Platform** (Power Apps, Power Automate, Dataverse) for the low-code business layer, and **Azure** (OpenAI, AI Search, APIM, Container Apps, Functions, Service Bus) for the pro-code backend — all provisioned as code. Azure AI Foundry was evaluated against a bare Azure OpenAI resource per [ADR-0005](docs/adr/0005-azure-openai-over-ai-foundry.md); the simpler path won for this project's scope.
 
 See [`Enterprise_Multi-Agent_AI_Platform_Technical_Task.md`](Enterprise_Multi-Agent_AI_Platform_Technical_Task.md) for the original brief.
 
@@ -34,10 +34,11 @@ Milestones 0–2 complete. Live: Azure infrastructure (Key Vault, Container Regi
 | Tool | Purpose |
 |---|---|
 | [Azure CLI](https://learn.microsoft.com/cli/azure/) | `az login`, resource/role management, backs `azd` |
-| [Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install) | installed via `az bicep install` | compiles/deploys IaC |
+| [Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install) (via `az bicep install`) | compiles/deploys IaC |
 | [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) | provisioning + deployment + CI/CD pipeline scaffolding |
 | [Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction) | Power Platform solutions, environments, connection references |
-| Node.js 20+, Python 3.12+, Docker | app runtimes / local containers |
+| Node.js 20+, Python 3.12+ | app runtimes |
+| Docker Desktop (**must be running**, not just installed) | local container builds — `azd deploy`'s remote build is disabled on this subscription, see `manual-setup.md` #8 |
 | [GitHub CLI (`gh`)](https://cli.github.com/) | repo/CI automation |
 
 See [`manual-setup.md`](manual-setup.md) for the handful of steps that cannot be scripted, and why.
@@ -46,9 +47,21 @@ See [`manual-setup.md`](manual-setup.md) for the handful of steps that cannot be
 
 `apps/api` runs both standalone and deployed behind APIM (see [`apps/api/README.md`](apps/api/README.md)) with one working Semantic Kernel agent. Documentation and diagrams grow alongside the implementation; see [`docs/`](docs/) (added as each milestone lands).
 
+## Documentation
+
+| Doc | Covers |
+|---|---|
+| [`docs/security-model.md`](docs/security-model.md) | Identity, RBAC, token validation, secrets handling, known limitations — living doc, updated every milestone |
+| [`docs/cost-analysis.md`](docs/cost-analysis.md) | Per-resource cost breakdown, free-tier/credit strategy, budget guardrails |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records — the reasoning behind every non-trivial choice |
+| [`docs/diagrams/`](docs/diagrams/) | Sequence diagrams for major request flows (auth, agent chat) |
+| [`manual-setup.md`](manual-setup.md) | The handful of steps that can't be automated, and why |
+| [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) | Milestone-by-milestone decisions, blockers, resolutions, lessons learned |
+| [`CHANGELOG.md`](CHANGELOG.md) | Notable changes per milestone |
+
 ## Local configuration
 
-Copy [`.env.example`](.env.example) to `.env` and fill in real values (subscription/tenant IDs, region, APIM publisher contact, budget alert email — see `manual-setup.md` #1-2 for where these come from). `.env` is gitignored and is the single source of truth for local config; nothing here is hardcoded into source or Bicep defaults.
+Copy [`.env.example`](.env.example) to `.env` and fill in real values (subscription/tenant IDs, region, APIM/budget contacts, Entra app + Power Platform IDs, Azure OpenAI RBAC principal — each documented inline in the file, with a pointer to `manual-setup.md` where the value comes from a manual step). `.env` is gitignored and is the single source of truth for local config; nothing here is hardcoded into source or Bicep defaults.
 
 PowerShell has no native `.env` sourcing, so load it into your session before running `az`/`azd`/`pac` commands:
 
