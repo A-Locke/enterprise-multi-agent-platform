@@ -13,7 +13,7 @@
           "redirectUrl": "https://global.consent.azure-apim.net/redirect",
           "properties": {
             "IsFirstParty": "False",
-            "AzureActiveDirectoryResourceId": "api://<AZURE_API_APP_CLIENT_ID>",
+            "AzureActiveDirectoryResourceId": "<AZURE_API_APP_CLIENT_ID>",
             "IsOnbehalfofLoginSupported": true
           },
           "customParameters": {
@@ -24,7 +24,7 @@
               "value": "<AZURE_TENANT_ID>"
             },
             "resourceUri": {
-              "value": "api://<AZURE_API_APP_CLIENT_ID>"
+              "value": "<AZURE_API_APP_CLIENT_ID>"
             },
             "enableOnbehalfOfLogin": {
               "value": "false"

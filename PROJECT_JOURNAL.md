@@ -183,9 +183,31 @@ Two small `pac` friction points along the way, both quick fixes: `pac connector 
 
 Switching the connector's auth from client-secret (the default) to managed identity is a portal-only toggle with no CLI equivalent found — `manual-setup.md` #9. Once done, the resulting redirect URL + issuer + subject identifier get scripted into the Entra app registration (`az ad app update` for the redirect URI, `az ad app federated-credential create` for the trust) — those two calls are ready to run as soon as the values exist, just not before.
 
+### Bug found via live sign-in attempt: self-referential token request
+
+Trying to create a Connection from the connector failed at the sign-in popup: `AADSTS90009:
+Application '<client-id>' is requesting a token for itself. This scenario is supported only
+if resource is specified using the GUID based App Identifier.` Root cause: reusing the same
+app registration as both the connector's client and the API resource means the token request
+is self-referential, and Entra specifically rejects that when the resource is expressed as
+the App ID URI (`api://<client-id>`) rather than the bare client-id GUID.
+
+Recognized what was happening faster than the first time around specifically *because* it had
+already been documented once: Milestone 1 hit the same underlying platform behavior from a
+different angle (Entra issuing a bare-GUID `aud` claim instead of `api://` for this app's own
+tokens), and that ADR/journal entry made this one easy to place. Fixed by changing
+`AzureActiveDirectoryResourceId` and `resourceUri` in the connector's properties template to
+the bare GUID (kept the `api://` form for `scopes`, a different field the error didn't
+implicate). Made `scripts/setup-copilot-connector.ps1` idempotent (create-or-update by name)
+along the way, since fixing this meant re-running it against an already-created connector.
+
+**Lesson:** the value of writing these down isn't just for someone else — it paid off within
+the same day, on a different Azure service, because the pattern ("self-referential app token
+requests need the bare GUID, not the App ID URI") was recognizable on sight the second time.
+
 ### Next steps
 
-- User completes `manual-setup.md` #9 (managed-identity toggle in the portal).
+- User completes `manual-setup.md` #9 (managed-identity toggle in the portal) with the corrected connector.
 - Wire the resulting redirect URI + federated credential into the app registration.
 - Create and test a Connection.
 - Author the actual Copilot Studio agent (topics, generative orchestration, wiring this connector as a custom action), publish to a demo channel.

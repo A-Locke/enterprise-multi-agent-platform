@@ -1,5 +1,5 @@
 {
-  "connectorId": null,
+  "connectorId": "<CONNECTOR_ID_OR_NULL>",
   "environment": null,
   "apiProperties": "apiProperties.json",
   "apiDefinition": "apiDefinition.json",

@@ -36,3 +36,4 @@ Thumbs.db
 # generated files are not.
 power-platform/solutions/connectors/*/apiDefinition.json
 power-platform/solutions/connectors/*/apiProperties.json
+power-platform/solutions/connectors/*/settings.json

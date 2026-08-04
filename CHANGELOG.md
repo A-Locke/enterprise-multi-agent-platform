@@ -7,7 +7,10 @@ All notable changes to this project are documented in this file. Format loosely 
 ### Added
 - ADR-0006: Copilot Studio custom connector uses managed identity + federated credential instead of a client secret — the connector calls the API as the signed-in user (preserving Milestone 1's per-user RBAC) without introducing this project's first stored secret. Reuses the existing API app registration.
 - `power-platform/solutions/connectors/platform-api/`: custom connector definition (Swagger 2.0 + OAuth AAD properties), templated with placeholders, created live via `pac connector create`.
-- `scripts/setup-copilot-connector.ps1`: generates the real connector files from templates and creates the connector.
+- `scripts/setup-copilot-connector.ps1`: generates the real connector files from templates and creates or updates the connector (idempotent).
+
+### Fixed
+- Connector's OAuth resource fields (`AzureActiveDirectoryResourceId`, `resourceUri`) used the App ID URI form (`api://<client-id>`), which Entra rejects for self-referential token requests (`AADSTS90009`) when client and resource are the same app. Changed to the bare client-id GUID — the same underlying platform behavior Milestone 1 already documented from a different angle.
 
 ### Deferred (documented, not forgotten)
 - Switching the connector to managed-identity auth is portal-only, no CLI surface found — `manual-setup.md` #9. Federated credential + redirect URI wiring is ready to script as soon as the portal-generated values exist.

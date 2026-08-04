@@ -34,6 +34,18 @@ relationship). No secret is created, stored, or rotated anywhere.
 Constraint: this requires the app registration to be single-tenant. Ours already is
 (`--sign-in-audience AzureADMyOrg` when created in Milestone 1) — no change needed there.
 
+**Real bug hit implementing this:** reusing the API app as both client and resource means the
+connector requests a token "for itself" — and Entra rejects that specific case
+(`AADSTS90009: ... requesting a token for itself. This scenario is supported only if
+resource is specified using the GUID based App Identifier`) when the resource is expressed
+as the App ID URI (`api://<client-id>`) rather than the bare client-id GUID. This is the same
+underlying platform behavior Milestone 1 already ran into from a different angle (Entra
+issuing a bare-GUID `aud` claim instead of the `api://` form for this app's own tokens) —
+recognizable the second time specifically because it had already been documented once.
+Fixed by using the bare GUID for `AzureActiveDirectoryResourceId`/`resourceUri` in the
+connector's properties, while keeping the App-ID-URI form for `scopes` (a different field,
+not implicated by the error).
+
 ## Decision
 
 Use the **managed identity + federated credential** path, not a client secret:
