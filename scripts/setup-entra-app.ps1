@@ -54,6 +54,23 @@ if (-not $spId) {
     Write-Host "Service principal already exists: $spId" -ForegroundColor Yellow
 }
 
+# Microsoft Graph "Sign in and read user profile" (User.Read) -- not added by default when
+# an app is created via `az ad app create` (unlike portal-created apps, which get it
+# automatically). Without it, Entra's consent screen has nothing to show the user and the
+# sign-in flow fails outright with AADSTS90008.
+$graphApiId = "00000003-0000-0000-c000-000000000000"
+$userReadScopeId = "e1fe6dd8-ba31-4d61-89e7-88639da4683d"
+Write-Host "Ensuring Microsoft Graph User.Read permission..." -ForegroundColor Cyan
+$existingPermissions = az ad app permission list --id $appId -o json | ConvertFrom-Json
+$hasUserRead = $existingPermissions | Where-Object { $_.resourceAppId -eq $graphApiId -and ($_.resourceAccess | Where-Object { $_.id -eq $userReadScopeId }) }
+if ($hasUserRead) {
+    Write-Host "Already present - skipping." -ForegroundColor Yellow
+} else {
+    az ad app permission add --id $appId --api $graphApiId --api-permissions "$userReadScopeId=Scope" | Out-Null
+    az ad app permission grant --id $appId --api $graphApiId --scope "User.Read" | Out-Null
+    Write-Host "Added and granted (pre-consented for all principals)." -ForegroundColor Green
+}
+
 # Self-referencing permission: this app also acts as its own OAuth client (Milestone 3's
 # Copilot Studio connector reuses it rather than creating a second app registration).
 # Exposing the scope isn't enough for the app to request it against itself as a client --

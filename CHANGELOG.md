@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file. Format loosely 
 ### Fixed
 - Connector's OAuth resource fields (`AzureActiveDirectoryResourceId`, `resourceUri`) used the App ID URI form (`api://<client-id>`), which Entra rejects for self-referential token requests (`AADSTS90009`) when client and resource are the same app. Changed to the bare client-id GUID — the same underlying platform behavior Milestone 1 already documented from a different angle.
 - Reusing the API app as its own OAuth client also needs its own `access_as_user` scope explicitly listed under its own API permissions (`AADSTS650057` otherwise) — exposing a scope isn't the same as being permitted to request it against yourself. Folded into `scripts/setup-entra-app.ps1` (idempotent) rather than left as a one-off CLI fix.
+- Apps created via `az ad app create` don't get the Microsoft Graph `User.Read` ("Sign in and read user profile") delegated permission that portal-created apps receive by default — without it, sign-in fails outright (`AADSTS90008`). Added and granted, also folded into `scripts/setup-entra-app.ps1`.
 
 ### Deferred (documented, not forgotten)
 - Switching the connector to managed-identity auth is portal-only, no CLI surface found — `manual-setup.md` #9. Federated credential + redirect URI wiring is ready to script as soon as the portal-generated values exist.

@@ -217,6 +217,20 @@ the app at itself as the API) followed by `az ad app permission grant --scope
 access_as_user`, which pre-consents for all principals — no interactive admin-consent click
 needed. Verified via `az ad app permission list`.
 
+### Third bug: no Microsoft Graph permission at all
+
+Past both self-reference issues, sign-in failed again with `AADSTS90008: ... must require
+access to Microsoft Graph by specifying at least 'Sign in and read user profile'
+permission.` `az ad app permission list` confirmed the app had exactly one permission — its
+own self-referencing scope — and nothing pointing at Microsoft Graph. Apps created via
+`az ad app create` don't get the `User.Read` delegated permission that portal-created apps
+receive automatically; without it, Entra's consent screen has no baseline profile scope to
+show and the sign-in flow refuses to proceed. Fixed the same way as the other two: `az ad app
+permission add` (Microsoft Graph's well-known app ID `00000003-0000-0000-c000-000000000000`,
+scope `e1fe6dd8-ba31-4d61-89e7-88639da4683d` / `User.Read`) followed by `az ad app permission
+grant --scope User.Read`. Folded into `scripts/setup-entra-app.ps1` as a third idempotent
+block, re-ran the script to confirm all three checks now skip cleanly on a second pass.
+
 ### Next steps
 
 - User completes `manual-setup.md` #9 (managed-identity toggle in the portal) with the corrected connector.
