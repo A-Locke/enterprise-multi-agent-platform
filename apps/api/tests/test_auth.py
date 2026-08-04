@@ -38,7 +38,7 @@ def make_token(rsa_keys, roles: list[str] | None = None, expired: bool = False) 
     now = int(time.time())
     payload = {
         "iss": settings.issuer,
-        "aud": settings.audience,
+        "aud": settings.audience[0],  # bare client-id GUID, matching what Entra actually issues
         "oid": "test-oid",
         "name": "Test User",
         "roles": roles or [],

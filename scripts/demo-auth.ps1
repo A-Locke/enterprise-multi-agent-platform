@@ -64,6 +64,14 @@ if (-not $token) {
 
 Write-Host "Signed in. Calling API..." -ForegroundColor Green
 
+# Debug: decode the token payload (unverified, local-only) to see what Entra actually issued.
+$payloadB64 = $token.Split(".")[1]
+$payloadB64 = $payloadB64.Replace("-", "+").Replace("_", "/")
+switch ($payloadB64.Length % 4) { 2 { $payloadB64 += "==" } 3 { $payloadB64 += "=" } }
+$claims = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($payloadB64)) | ConvertFrom-Json
+Write-Host ""
+Write-Host "DEBUG token claims: aud=$($claims.aud) iss=$($claims.iss) roles=$($claims.roles -join ',') scp=$($claims.scp)" -ForegroundColor DarkGray
+
 Write-Host ""
 Write-Host "GET /me" -ForegroundColor Cyan
 Invoke-RestMethod -Uri "$ApiBaseUrl/me" -Headers @{ Authorization = "Bearer $token" } | ConvertTo-Json
