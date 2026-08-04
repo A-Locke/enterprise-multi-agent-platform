@@ -205,6 +205,18 @@ along the way, since fixing this meant re-running it against an already-created 
 the same day, on a different Azure service, because the pattern ("self-referential app token
 requests need the bare GUID, not the App ID URI") was recognizable on sight the second time.
 
+### Second self-reference bug: the app also needs to list its own scope as a permission
+
+Fixing the resource-identifier format got past `AADSTS90009` but immediately hit
+`AADSTS650057: Invalid resource ... List of valid resources from app registration: `
+(empty). The self-referencing pattern has a second sharp edge: an app acting as its own
+OAuth client needs its own delegated scope explicitly listed under its *own* API permissions
+(`requiredResourceAccess`) — exposing the scope (as a resource) isn't enough for the app to
+also request it (as a client) against itself. Fixed with `az ad app permission add` (pointing
+the app at itself as the API) followed by `az ad app permission grant --scope
+access_as_user`, which pre-consents for all principals — no interactive admin-consent click
+needed. Verified via `az ad app permission list`.
+
 ### Next steps
 
 - User completes `manual-setup.md` #9 (managed-identity toggle in the portal) with the corrected connector.

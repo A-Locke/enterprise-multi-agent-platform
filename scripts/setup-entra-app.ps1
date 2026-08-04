@@ -54,6 +54,23 @@ if (-not $spId) {
     Write-Host "Service principal already exists: $spId" -ForegroundColor Yellow
 }
 
+# Self-referencing permission: this app also acts as its own OAuth client (Milestone 3's
+# Copilot Studio connector reuses it rather than creating a second app registration).
+# Exposing the scope isn't enough for the app to request it against itself as a client --
+# it also needs the scope listed under its own API permissions. Without this,
+# self-referential token requests fail with AADSTS650057 (empty valid-resources list).
+$scopeId = (Get-Content "$repoRoot\infra\entra\api-scope.json" | ConvertFrom-Json).oauth2PermissionScopes[0].id
+Write-Host "Ensuring self-referencing access_as_user permission..." -ForegroundColor Cyan
+$existingPermissions = az ad app permission list --id $appId -o json | ConvertFrom-Json
+$hasSelfPermission = $existingPermissions | Where-Object { $_.resourceAppId -eq $appId -and ($_.resourceAccess | Where-Object { $_.id -eq $scopeId }) }
+if ($hasSelfPermission) {
+    Write-Host "Already present - skipping." -ForegroundColor Yellow
+} else {
+    az ad app permission add --id $appId --api $appId --api-permissions "$scopeId=Scope" | Out-Null
+    az ad app permission grant --id $appId --api $appId --scope "access_as_user" | Out-Null
+    Write-Host "Added and granted (pre-consented for all principals)." -ForegroundColor Green
+}
+
 $roles = Get-Content "$repoRoot\infra\entra\app-roles.json" | ConvertFrom-Json
 $adminRoleId = ($roles | Where-Object { $_.value -eq "Admin" }).id
 $agentUserRoleId = ($roles | Where-Object { $_.value -eq "Agent.User" }).id
