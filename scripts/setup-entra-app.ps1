@@ -54,21 +54,28 @@ if (-not $spId) {
     Write-Host "Service principal already exists: $spId" -ForegroundColor Yellow
 }
 
-# Power Platform's OAuth broker for custom connectors (AAD identity provider) redirects
-# through its own fixed endpoint, not a per-connector one -- without it registered as a
-# reply URL, interactive sign-in fails outright with AADSTS500113 ("No reply address is
-# registered"). --web-redirect-uris replaces the whole list, so read-merge-write rather
-# than overwrite (a connector-specific redirect URI gets added here too, later, once the
-# connector switches to managed-identity auth per ADR-0006).
-$powerPlatformRedirectUri = "https://global.consent.azure-apim.net/redirect"
-Write-Host "Ensuring Power Platform connector redirect URI is registered..." -ForegroundColor Cyan
+# Power Platform's OAuth broker for custom connectors (AAD identity provider) needs a reply
+# URL registered before interactive sign-in can complete (AADSTS500113 otherwise). Per
+# Microsoft's docs, the value it actually sends is NOT the bare
+# https://global.consent.azure-apim.net/redirect -- it's a connector-specific URL with a
+# suffix unique to that connector (https://.../redirect/<connector-slug>), copied from the
+# connector's Security tab (or, as happened here, echoed back verbatim in an AADSTS50011
+# mismatch error). Stable across connector updates per Microsoft, so safe to register once.
+# Registering both: the bare one is harmless to keep and the docs' own worked example
+# registers it too. --web-redirect-uris replaces the whole list, so read-merge-write.
+$redirectUris = @("https://global.consent.azure-apim.net/redirect")
+if ($env:COPILOT_CONNECTOR_REDIRECT_URI) {
+    $redirectUris += $env:COPILOT_CONNECTOR_REDIRECT_URI
+}
+Write-Host "Ensuring Power Platform connector redirect URI(s) are registered..." -ForegroundColor Cyan
 $existingRedirectUris = az ad app show --id $appId --query "web.redirectUris" -o json | ConvertFrom-Json
-if ($existingRedirectUris -contains $powerPlatformRedirectUri) {
+$missingUris = $redirectUris | Where-Object { $existingRedirectUris -notcontains $_ }
+if (-not $missingUris) {
     Write-Host "Already present - skipping." -ForegroundColor Yellow
 } else {
-    $newRedirectUris = @($existingRedirectUris) + $powerPlatformRedirectUri
+    $newRedirectUris = @($existingRedirectUris) + $missingUris
     az ad app update --id $appId --web-redirect-uris $newRedirectUris | Out-Null
-    Write-Host "Added." -ForegroundColor Green
+    Write-Host "Added: $($missingUris -join ', ')" -ForegroundColor Green
 }
 
 # Microsoft Graph "Sign in and read user profile" (User.Read) -- not added by default when

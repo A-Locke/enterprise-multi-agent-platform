@@ -245,6 +245,26 @@ block — read-merge-write rather than a blind overwrite, since `--web-redirect-
 the entire list and a second, connector-specific redirect URI is still expected to land here
 later once the connector switches to managed-identity auth (ADR-0006, `manual-setup.md` #9).
 
+### Correction: the bare redirect URI wasn't actually enough
+
+Sign-in still failed, now with `AADSTS50011: The redirect URI
+'https://global.consent.azure-apim.net/redirect/<connector-specific-suffix>'
+... does not match the redirect URIs configured for the application` — a different, longer
+URL than the bare one just registered. Asked to research rather than guess again before
+touching the app a fifth time. Microsoft's own custom-connector AAD-auth doc
+(`learn.microsoft.com/en-us/connectors/custom-connectors/azure-active-directory-authentication`)
+confirms the bare `.../redirect` endpoint was never the real requirement — Power Platform
+generates a **connector-specific** redirect URL (a unique suffix per connector) that has to
+be copied from the connector's Security tab and registered instead. It's stable across
+connector updates (per the same doc), so it only needs registering once — same lifecycle as
+the bare one, just not interchangeable with it. The AADSTS50011 error had already echoed the
+exact value back verbatim, so no portal trip was needed to retrieve it. Registered it
+alongside the bare URI (both are harmless to keep; Microsoft's own worked example registers
+both). Stored the real value in `.env` as `COPILOT_CONNECTOR_REDIRECT_URI` (gitignored, not
+hardcoded into the script) with a placeholder added to `.env.example`, and updated
+`scripts/setup-entra-app.ps1`'s redirect-URI block to register it from the environment when
+present. Re-ran the script to confirm both URIs now skip cleanly.
+
 ### Next steps
 
 - User completes `manual-setup.md` #9 (managed-identity toggle in the portal) with the corrected connector.
