@@ -2,13 +2,15 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 3: Copilot Studio Agent
+## [Milestone 3] — 2026-08-05 — Copilot Studio Agent
 
 ### Added
 - ADR-0006: Copilot Studio custom connector uses managed identity + federated credential instead of a client secret — the connector calls the API as the signed-in user (preserving Milestone 1's per-user RBAC) without introducing this project's first stored secret. Reuses the existing API app registration. **Superseded by ADR-0007 below.**
 - ADR-0007: managed identity turned out to be an unreliable preview feature (undocumented, no CLI surface, and one portal attempt deleted the connector outright). Falls back to standard client-secret OAuth, secret stored in Key Vault rather than only ever existing as a value pasted into a portal field — this project's first stored secret, and a documented exception to its zero-secrets posture.
+- ADR-0008: Copilot Studio authorization spans four independent, portal-only permission systems (Entra security group, per-user license/trial, Azure pay-as-you-go billing, Microsoft 365 billing-account role) — documents all four, and the finding that the free trial alone was likely sufficient for what this milestone actually needed.
 - `power-platform/solutions/connectors/platform-api/`: custom connector definition (Swagger 2.0 + OAuth AAD properties), templated with placeholders, created live via `pac connector create`.
 - `scripts/setup-copilot-connector.ps1`: generates the real connector files from templates and creates or updates the connector (idempotent).
+- "Enterprise Multi-Agent Platform" agent authored in Copilot Studio, with the connector wired in as a Tool (`Ask the platform agent a question`) and instructions directing the model to always route through it rather than answer from its own knowledge.
 
 ### Fixed
 - Connector's OAuth resource fields (`AzureActiveDirectoryResourceId`, `resourceUri`) used the App ID URI form (`api://<client-id>`), which Entra rejects for self-referential token requests (`AADSTS90009`) when client and resource are the same app. Changed to the bare client-id GUID — the same underlying platform behavior Milestone 1 already documented from a different angle.
@@ -18,10 +20,19 @@ All notable changes to this project are documented in this file. Format loosely 
 - The bare endpoint alone wasn't sufficient (`AADSTS50011`) — Power Platform actually requires a connector-specific redirect URL (unique suffix per connector, confirmed via Microsoft's docs), copied from the connector's Security tab or, in this case, echoed back by the mismatch error itself. Registered alongside the bare one; stored as `COPILOT_CONNECTOR_REDIRECT_URI` in `.env` (not hardcoded) since it's an environment-specific value. `scripts/setup-entra-app.ps1` now registers both.
 - Past the redirect fix, token exchange failed with `AADSTS7000215: Invalid client secret provided` — expected, since no secret had ever been configured (managed identity was the plan). See ADR-0007: switched to client-secret auth instead after the managed-identity portal flow proved unreliable.
 - The connector's Security-tab form was showing tenant ID and scope as unset even though `pac connector update` had set them correctly underlying — filled in from the real (gitignored) `apiProperties.json` rather than guessed, since the form doesn't roundtrip everything from the CLI-pushed definition.
+- First tool-call test failed with a 30-second `ConnectorTimeout` — Copilot Studio's tool-call timeout is shorter than a cold start (image pull + Semantic Kernel init + first Azure OpenAI call) on a scale-to-zero Container App. Not configurable via the connector's Swagger definition (checked). Fixed by raising `minReplicas` from 0 to 1 (`infra/modules/container-app-api.bicep`) — a small, confirmed-negligible ongoing cost traded for eliminating the cold start entirely.
+- Copilot Studio agent saves/creation failed tenant-wide with `permission to create agents / User license not found` — required an Entra security group (`Copilot Studio authors` tenant setting), a Copilot Studio trial license, and (to unblock the trial checkout button itself) fixing a missing Microsoft 365 billing-account address field. See ADR-0008.
+- Demo Website publish channel requires disabling the agent's own authentication entirely — structurally incompatible with this project's per-user delegated-auth design, not pursued as a channel.
+- Teams channel sign-in currently fails (`We couldn't find a Microsoft account`) — likely the same personal-account-derived-tenant root cause as ADR-0004, not a new issue. Not required for any subsequent milestone; deferred.
 
 ### Verified
 - A real Connection completes interactive AAD sign-in successfully against the deployed connector under client-secret auth — full chain confirmed end-to-end (redirect URI, Graph consent, self-referencing scope, token exchange).
 - Re-attempted the managed-identity switch once reliability was in hand as a fallback: it took the switch without deleting the connector this time, but silently reverted to requiring a client secret on revisiting the connector, with no action taken in between. Second distinct unsafe-failure mode from the same preview feature — documented in ADR-0007 as firsthand evidence, not just Microsoft's own "(Preview)" label.
+- End-to-end in Copilot Studio's Preview pane: real user identity → connector's per-user delegated OAuth → platform API's Entra App Role check (Milestone 1's RBAC) → Semantic Kernel → real Azure OpenAI response. This is the actual architectural claim of this milestone, proven without needing a published, externally-reachable channel.
+
+### Deferred (documented, not forgotten)
+- Publishing to an externally-reachable channel (Teams once its sign-in issue clears, or a `Web app` embed) — not needed for any milestone through Milestone 9; may be revisited for a Milestone 10 demo recording.
+- The Copilot Studio pay-as-you-go billing plan and the Contributor RBAC grant it required are left in place though likely unnecessary (ADR-0008) — full teardown (all project accounts, billing links, the temporary payment card) planned at project completion, not before.
 
 ## [Milestone 2] — 2026-08-04 — Core Orchestration
 

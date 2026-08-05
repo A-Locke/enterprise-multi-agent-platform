@@ -77,6 +77,15 @@ gh auth login   # already done for this environment
 4. Create a **Connection** from the connector (one-time interactive sign-in) to confirm the trust works end-to-end before wiring it into Copilot Studio.
 5. The secret expires after 1 year (`az ad app credential list --id <api-app-id>` to check dates) — rotate by generating a new one, updating the Key Vault secret, and repeating steps 1–3.
 
----
+## 10. Copilot Studio licensing (authoring + trial + billing account)
+
+**Manual because:** Copilot Studio authorization spans four independent, portal-only permission systems — an Entra security group, a per-user license/trial, Azure billing linkage, and a separate Microsoft 365 billing-account role — none scriptable end-to-end, and none documented together anywhere. See [ADR-0008](docs/adr/0008-copilot-studio-licensing.md) for the full story and why the billing-plan piece specifically may turn out to be unnecessary.
+
+**Action:**
+1. Create the Entra security group and add the authoring user (scriptable — `az ad group create` + `az ad group member add`), then in [Power Platform admin center](https://admin.powerplatform.microsoft.com/) → **Manage → Tenant settings → Copilot Studio authors**, assign that group. Portal-only for the assignment step itself.
+2. If a "Try now" / trial checkout button stays permanently disabled with no clear error, check **Microsoft 365 admin center → Billing → Billing accounts** for a missing required field (e.g. address) — it silently blocks all purchases/trial activations, not just Copilot Studio.
+3. Search "**Copilot Studio Trial**" in the Microsoft 365 admin center Marketplace (top search bar, not the left-nav "Your products" list, which can land on the wrong/paid listing) and activate the free trial for the authoring user — sufficient for creating and testing agents via the Preview pane.
+4. Only if publishing is actually needed: create a pay-as-you-go billing plan (Power Platform admin center → Licensing → Copilot Studio → **New billing plan**), scoped to the **Copilot Studio** meter specifically (not Dataverse/Power Apps/Power Automate). This requires the authoring account to have **Contributor** on the target Azure subscription (`az role assignment create --role Contributor`) — it won't otherwise, per ADR-0004's two-account setup.
+5. Sign out of Copilot Studio and back in after each of the above — group/license/billing changes don't take effect in an existing session.
 
 Anything not listed here — resource provisioning, RBAC assignments, CI/CD wiring, Power Platform solution deployment, cost budgets — is automated. This file will be updated immediately if another genuinely manual step is discovered during implementation.

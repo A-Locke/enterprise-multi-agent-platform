@@ -328,6 +328,75 @@ Connection still works. Wrote this up as an addendum to
 [ADR-0007](docs/adr/0007-copilot-connector-client-secret.md) — the decision doesn't change,
 now with firsthand evidence backing it rather than just Microsoft's "(Preview)" label.
 
+### Authoring the agent: a four-layer licensing maze
+
+Created the "Enterprise Multi-Agent Platform" agent in Copilot Studio, added the connector's
+`AgentChat` action as a Tool, and immediately hit `You don't have permission to create agents
+/ User license not found` on every save. This turned out to require four independent,
+unrelated permission systems, each found by hitting its specific failure in turn rather than
+from any single checklist: a **Copilot Studio authors** Entra security group (tenant setting),
+a **Copilot Studio license/trial** (per-user, Microsoft 365 admin center), **pay-as-you-go
+billing** linked to an Azure subscription (for *publishing* specifically, not creating), and a
+**Microsoft 365 billing-account role** (needed just to complete a €0.00 trial checkout — a
+permanently-disabled "Try now" button turned out to be a missing address field on the billing
+account, not a Copilot Studio issue at all).
+
+Working through this also required a subscription-wide **Contributor** RBAC grant for the
+Power Platform admin account (it had zero Azure RBAC — a separate organizational user from
+Milestone 0/ADR-0004) — confirmed explicitly with the user before applying, since it's much
+broader than any prior grant this session. Hit the same Git Bash `/subscriptions/...`
+path-mangling gotcha as before (`MSYS_NO_PATHCONV=1` again).
+
+Full writeup, including the finding that the pay-as-you-go piece was likely unnecessary for
+what this milestone actually needed, in
+[ADR-0008](docs/adr/0008-copilot-studio-licensing.md).
+
+### Tool-call timeout: cold start, not a config bug
+
+Once saving worked, the first real tool-call test failed with `ConnectorTimeout` after
+exactly 30 seconds — including a same-session retry, which argued against a simple cold
+start (a warm retry should be fast). Checked `az containerapp replica list`: zero replicas
+running. Checked Log Analytics: a fresh container startup logged right around the test
+window, no request-processing log line — consistent with the *entire* cold start (image
+pull, Semantic Kernel init, first Azure OpenAI call) eating the whole 30-second budget before
+a response could return, catching both the original attempt and the quick retry in the same
+still-warming window. Researched whether Copilot Studio's tool-call timeout is configurable
+via the connector's Swagger definition — it isn't; this appears to be a fixed limit in
+Copilot Studio's own orchestration layer, not something `apiDefinition.json` can override.
+
+Fix: raised the Container App's `minReplicas` from 0 to 1 (`infra/modules/container-app-api.bicep`,
+applied live via `az containerapp update` since `azd provision` unexpectedly required Docker
+for what should have been a Bicep-only change). Confirmed spend impact negligible first
+(€0.11 total spend against the €180 budget) before applying — trades scale-to-zero for a
+small ongoing cost, documented in `docs/cost-analysis.md`. Retest succeeded immediately after.
+
+### Publishing: two dead ends, one working answer
+
+**Demo Website** channel: publish succeeded, but the shared link showed "You don't have
+access to talk to this bot, contact the owner" — not our API's RBAC, but Copilot Studio's own
+Share/permission list (deliberately left at admin-only). Root cause: Demo Website requires
+disabling the agent's own authentication entirely (a hard platform requirement, confirmed via
+an explicit banner in the publish dialog), which strips out the very identity the Share list
+needs to recognize — and, more fundamentally, would strip out the identity our connector's
+per-user delegated auth depends on too. Structurally incompatible with this project's design,
+not a bug to work around.
+
+**Teams + Microsoft 365** channel: enabled cleanly, but signing in to teams.microsoft.com as
+the Power Platform admin account failed with `We couldn't find a Microsoft account` (web) and
+a generic error code (desktop app). Almost certainly another symptom of this tenant's
+personal-account origin (ADR-0004) confusing Teams' personal-vs-work-account sign-in
+detection, not a new mistake. Not pursued further — not required for any later milestone
+(Milestones 4+ continue via the Preview pane; Milestone 6's Graph integration is unrelated to
+signing into Teams as a user), and only potentially relevant again for a Milestone 10 demo
+recording, at which point it can be revisited fresh.
+
+**Decision:** the Preview pane's already-successful test (post-`minReplicas` fix) is
+sufficient evidence of the actual architectural claim — Copilot Studio's per-user identity,
+through the connector's delegated OAuth, through Milestone 1's Entra App Role check, through
+Semantic Kernel, to a real Azure OpenAI response. Publishing to an externally-reachable
+channel isn't something this milestone needs. Milestone 3 is complete on that basis.
+
 ### Next steps
 
-- Author the actual Copilot Studio agent (topics, generative orchestration, wiring this connector as a custom action), publish to a demo channel.
+- Milestone 4: specialized Semantic Kernel agents (knowledge, enterprise-integration), routing between Copilot Studio topics and the SK orchestrator.
+- Full project teardown (delete all accounts, unlink billing, destroy the temporary payment card) planned for project completion, not before — tracked outside the repo.
