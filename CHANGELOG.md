@@ -17,9 +17,11 @@ All notable changes to this project are documented in this file. Format loosely 
 - The app registration had no reply URL at all (`AADSTS500113`) — it was created purely as an API resource, never as an OAuth client. Registered Power Platform's bare custom-connector OAuth broker endpoint, read-merge-write to preserve room for other redirect URIs.
 - The bare endpoint alone wasn't sufficient (`AADSTS50011`) — Power Platform actually requires a connector-specific redirect URL (unique suffix per connector, confirmed via Microsoft's docs), copied from the connector's Security tab or, in this case, echoed back by the mismatch error itself. Registered alongside the bare one; stored as `COPILOT_CONNECTOR_REDIRECT_URI` in `.env` (not hardcoded) since it's an environment-specific value. `scripts/setup-entra-app.ps1` now registers both.
 - Past the redirect fix, token exchange failed with `AADSTS7000215: Invalid client secret provided` — expected, since no secret had ever been configured (managed identity was the plan). See ADR-0007: switched to client-secret auth instead after the managed-identity portal flow proved unreliable.
+- The connector's Security-tab form was showing tenant ID and scope as unset even though `pac connector update` had set them correctly underlying — filled in from the real (gitignored) `apiProperties.json` rather than guessed, since the form doesn't roundtrip everything from the CLI-pushed definition.
 
-### Deferred (documented, not forgotten)
-- Pasting the Key-Vault-stored client secret into the connector's Security tab is portal-only — confirmed against real Microsoft connector examples that `apiProperties.json` has no field for it regardless of identity provider. `manual-setup.md` #9.
+### Verified
+- A real Connection completes interactive AAD sign-in successfully against the deployed connector under client-secret auth — full chain confirmed end-to-end (redirect URI, Graph consent, self-referencing scope, token exchange).
+- Re-attempted the managed-identity switch once reliability was in hand as a fallback: it took the switch without deleting the connector this time, but silently reverted to requiring a client secret on revisiting the connector, with no action taken in between. Second distinct unsafe-failure mode from the same preview feature — documented in ADR-0007 as firsthand evidence, not just Microsoft's own "(Preview)" label.
 
 ## [Milestone 2] — 2026-08-04 — Core Orchestration
 

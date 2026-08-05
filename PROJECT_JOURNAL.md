@@ -296,15 +296,38 @@ ID into a Windows path.
 Checked real `microsoft/PowerPlatformConnectors` examples for the `aad` identity provider
 before assuming a `clientSecret` field belonged in `apiProperties.json` — it doesn't; the
 secret has always been a portal-only field (confirmed against the original ADR-0006 tutorial
-too), never part of the connector definition. So the "connector was deleted" symptom
-doubled as the explanation for "no Security tab": nothing existed there to show a tab for.
-Re-ran `scripts/setup-copilot-connector.ps1`, which found and updated a connector — `pac
-connector download` confirmed its live definition (client ID, tenant, scopes) and, notably,
-its redirect URL still matched the one already registered on the Entra app exactly, so no
-further Entra-side changes were needed there.
+too), never part of the connector definition. Re-ran `scripts/setup-copilot-connector.ps1`,
+which found and updated a connector — `pac connector download` confirmed its live definition
+(client ID, tenant, scopes) and, notably, its redirect URL still matched the one already
+registered on the Entra app exactly, so no further Entra-side changes were needed there.
+
+Assumed at the time that the still-missing Security tab meant nothing existed there to show a
+tab for. That guess was wrong: the screenshots turned out to be the **Connection** creation
+dialog ("+ New connection"), a different screen entirely from the connector's own edit view.
+The real path is the pencil-icon **Edit** on the Custom Connectors list, which opens a
+multi-step editor (**1. General → 2. Security → 3. Definition → …**) — Security was there all
+along, just not where we were looking.
+
+### Client secret verified, then one more look at managed identity
+
+With the real Security tab found, the tenant ID and scope fields turned out to be showing as
+unset in the form (despite being correctly set in the underlying JSON via `pac connector
+update`) — filled them in from the real, gitignored `apiProperties.json`, along with the
+client secret the form required to save at all. Created a Connection: signed in successfully,
+confirming the whole chain (redirect URI, permissions, consent, token exchange) works
+end-to-end under client-secret auth.
+
+With that known-good state in hand, tried the managed-identity switch once more, carefully.
+It succeeded this time — no deletion, a "Managed identity" Issuer/Subject/Audience box
+appeared. But re-opening the connector afterward, the managed-identity option had reverted:
+back to demanding a client secret, with the toggle to choose managed identity gone entirely.
+Nothing had been touched in between. Second unsafe-failure mode from the same preview
+feature (first: deletes the connector; now: silently reverts a saved setting) — concrete,
+not just documentation caveats. Re-entered the client secret, saved, confirmed a fresh
+Connection still works. Wrote this up as an addendum to
+[ADR-0007](docs/adr/0007-copilot-connector-client-secret.md) — the decision doesn't change,
+now with firsthand evidence backing it rather than just Microsoft's "(Preview)" label.
 
 ### Next steps
 
-- User retrieves the client secret from Key Vault locally and pastes it into the connector's Security tab (`manual-setup.md` #9).
-- Create and test a Connection.
 - Author the actual Copilot Studio agent (topics, generative orchestration, wiring this connector as a custom action), publish to a demo channel.

@@ -57,6 +57,31 @@ changed.
 5. First-time user consent (creating a Connection) is still an interactive sign-in click —
    unchanged from ADR-0006, inherent to delegated OAuth regardless of credential type.
 
+## A second, closer look at managed identity
+
+Client-secret auth was verified end-to-end first (a real Connection completed sign-in
+successfully). With a known-good fallback in hand, ADR-0006's managed-identity path got one
+more try — this time reaching the actual Security tab (the earlier "no Security tab" report
+turned out to be looking at the Connection dialog, not the connector's own edit screen; the
+pencil-icon edit view on the Custom Connectors list has it, under a **2. Security** step).
+
+With the tenant ID and scope fields corrected (the form was showing them as unset — Microsoft
+explicitly warns managed identity needs a real tenant GUID, not the default `common`) and the
+client secret filled in to satisfy the form's validation, switching **Secret options** to
+**Use managed identity** and clicking **Update connector** succeeded this time — no deletion,
+Redirect URL stayed the one already registered on the Entra app, and a "Managed identity" box
+with Issuer/Subject/Audience fields appeared.
+
+Re-opening the connector afterward, the **Use managed identity** option — the entire "Secret
+options" toggle — had reverted or become unavailable, with the form back to demanding a
+client secret in a field it had shown as populated moments before. Nothing was changed
+in between by us. This is the second time this specific feature has failed in a way that
+doesn't fail safely (first: silently deletes the connector; now: silently reverts a saved
+setting) — concrete evidence, not just documentation caveats, that "Managed Identity
+(Preview)" isn't reliable enough to depend on yet. Re-entered the client secret (retrieved
+from Key Vault, never pasted into chat or a file) and confirmed a fresh Connection completes
+successfully under client-secret auth. That's the configuration this project actually runs.
+
 ## Consequences
 
 **Positive:**
@@ -72,9 +97,10 @@ changed.
   same way any operational credential would be, not swept under the rug.
 - Key Vault read access for connector regeneration is one more local RBAC grant to maintain,
   on top of the Azure OpenAI one from Milestone 2.
-- If Microsoft's managed-identity option matures (documented CLI surface, stable portal UI),
-  revisiting this ADR to move back is a reasonable future item — not attempted now given
-  effort-vs-payoff for a project at this scope.
+- If Microsoft's managed-identity option matures (documented CLI surface, stable portal UI,
+  and stops silently reverting saved settings), revisiting this ADR to move back is a
+  reasonable future item — not attempted now given two separate unsafe-failure modes
+  observed firsthand, not just a documentation caveat.
 
 ## References
 
