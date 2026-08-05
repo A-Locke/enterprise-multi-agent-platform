@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Milestone 4: Multi-Agent Coordination
+
+### Added
+- ADR-0009: Copilot Studio Connected Agents chosen over pro-code Semantic Kernel routing for multi-agent coordination — explicitly rejected the lower-friction pro-code option because this project exists to demonstrate Copilot Studio competency specifically, and Connected Agents can do the job.
+- Two Connected Agents wired to the Milestone 3 parent agent: **Knowledge Agent** (placeholder pending Milestone 5's real RAG) and **Enterprise Integration Agent** (placeholder pending Milestone 6's real Graph actions), each with routing-critical descriptions.
+- Parent agent's instructions rewritten to define the full orchestration pattern explicitly (routing criteria, invoke → wait → combine → respond, subagents never reply directly) per Microsoft's documented multi-agent best practices, rather than a vague "use child agents when relevant."
+
+### Verified
+- Four targeted test messages confirm correct routing: knowledge-domain → Knowledge Agent, enterprise-integration → Enterprise Integration Agent, general → the existing Milestone 3 platform tool, domain-mismatch (weather) → graceful fallthrough to the general tool rather than getting stuck.
+- One recurrence of the Milestone 3 tool-call timeout during testing — isolated to a single Container App restart (confirmed via Log Analytics: one restart in 2 hours, requests immediately before/after both succeeded). `minReplicas: 1` eliminates the *guaranteed* cold start after idle periods; it doesn't guarantee zero restarts ever, since Container Apps can still recycle a replica for platform-level reasons. Copilot Studio's own retry logic recovered automatically. Documented as a known residual limitation, not chased further given it self-heals.
+
 ## [Milestone 3] — 2026-08-05 — Copilot Studio Agent
 
 ### Added

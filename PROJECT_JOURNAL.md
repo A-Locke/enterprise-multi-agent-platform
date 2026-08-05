@@ -166,8 +166,9 @@ Azure OpenAI resource + `gpt-5-mini` deployment, Semantic Kernel orchestration (
 
 ## Milestone 3 — Copilot Studio Agent
 
-**Status:** in progress (prep work done, portal authoring not started)
+**Status:** complete
 **Date started:** 2026-08-04
+**Date completed:** 2026-08-05
 
 ### Prep work: custom connector, automated as far as it goes
 
@@ -398,5 +399,74 @@ channel isn't something this milestone needs. Milestone 3 is complete on that ba
 
 ### Next steps
 
-- Milestone 4: specialized Semantic Kernel agents (knowledge, enterprise-integration), routing between Copilot Studio topics and the SK orchestrator.
 - Full project teardown (delete all accounts, unlink billing, destroy the temporary payment card) planned for project completion, not before — tracked outside the repo.
+
+## Milestone 4 — Multi-Agent Coordination
+
+**Status:** in progress
+**Date started:** 2026-08-05
+
+### Architecture decision: Connected Agents, not pro-code routing
+
+The obvious pragmatic choice — route between specialized capabilities inside `agent.py` using
+Semantic Kernel plugins, keeping Copilot Studio as the thin single front door built in
+Milestone 3 — was proposed first, specifically to avoid multiplying Milestone 3's
+well-documented Copilot Studio operational friction (the licensing maze, the managed-identity
+preview feature's two unsafe failure modes) across additional agents.
+
+Explicitly rejected: this project exists to demonstrate Copilot Studio/Power Platform
+competency specifically, and routing around Copilot Studio's own native multi-agent
+capability into more comfortable pro-code territory undercuts that purpose, however real the
+friction is. Per ADR-0001's governing principle, the Microsoft-native option is evaluated
+first — and here, unlike cases where it's genuinely incapable, Connected Agents can do the
+job. Full reasoning in [ADR-0009](docs/adr/0009-copilot-studio-connected-agents.md).
+
+### Built: two Connected Agents, parent orchestrator instructions
+
+Created two child agents in Copilot Studio — **Knowledge Agent** and **Enterprise Integration
+Agent** — each with placeholder instructions (real capability lands in Milestones 5 and 6
+respectively) but real, routing-critical descriptions, published, and wired to the Milestone 3
+parent agent as Connected Agents.
+
+Rewrote the parent's instructions to define the full orchestration pattern explicitly, per
+Microsoft's own documented best practices (`learn.microsoft.com/en-us/microsoft-copilot-studio/guidance/multi-agent-patterns`)
+rather than a vague "use child agents when relevant": explicit routing criteria per
+domain, directive language (MUST/NEVER-style framing) telling subagents never to reply to the
+user directly, and the parent's own invoke → wait → combine → respond sequence spelled out.
+The existing platform connector/tool stayed on the parent rather than being duplicated onto a
+child — it's the one pro-code integration point this project has, not a per-domain concern.
+
+### Verified: routing works, including graceful degradation
+
+Four targeted test messages (kept deliberately few — multi-agent turns cost meaningfully more
+Copilot Credits than single-agent ones, since each hop is its own reasoning-model
+invocation):
+
+1. Knowledge-domain question → routed to Knowledge Agent, correctly reported the placeholder
+   "no knowledge source connected" state (paraphrased by the model rather than verbatim, but
+   substantively correct).
+2. Enterprise-integration question → routed to Enterprise Integration Agent.
+3. General question → routed to the existing platform tool (Milestone 3's connector), same
+   path as before Connected Agents existed.
+4. Domain-mismatch question (weather) → correctly fell through to the general tool rather than
+   getting stuck between the two specialists, per Microsoft's own recommended test case.
+
+### One recurrence of the tool-call timeout — isolated, not systemic
+
+Test 3 hit the same 30-second `ConnectorTimeout` fixed in Milestone 3 (`minReplicas: 1`).
+Checked `az containerapp replica list` — same replica, no crash. Checked Log Analytics: exactly
+one container restart in the prior two hours, with successful `/agent/chat` requests both
+immediately before and after it. Conclusion: `minReplicas: 1` eliminates the *guaranteed*
+cold start after every idle period (the actual Milestone 3 bug), but doesn't give an absolute
+guarantee against all restarts — Container Apps can still occasionally recycle a replica for
+platform-level reasons (node patching, health-probe hiccups), a documented characteristic of
+the service, not a config gap on our side. The test request landed in that narrow window;
+Copilot Studio's own retry logic recovered automatically and returned a real response moments
+later. Worth documenting honestly as a known residual limitation rather than claiming the
+Milestone 3 fix is airtight — not worth chasing further given it self-heals gracefully.
+
+### Next steps
+
+- Milestone 5: real RAG capability for the Knowledge Agent (Azure AI Search + Blob + Functions ingestion).
+- Milestone 6: real Microsoft Graph actions for the Enterprise Integration Agent.
+- Sequence diagram for the full multi-agent path (parent → child → response) — deferred to accompany Milestone 5/6's real implementations rather than diagramming the placeholder state.
