@@ -19,10 +19,15 @@ Two categories of principal exist today:
   maintain, and no API keys anywhere: the OpenAI resource has `disableLocalAuth: true`, so
   key-based auth isn't even a configuration option that exists to misuse.
 
-No client secrets exist anywhere in this project's Entra app registrations — the API's
-registration (`infra/entra/`) is a public client (device-code / PKCE flows only), and
+Almost no client secrets exist anywhere in this project's Entra app registrations — the API's
+registration (`infra/entra/`) is a public client for its own device-code / PKCE flows, and
 service-to-service Azure calls use managed identity, which requires no stored credential at
-all.
+all. The one accepted exception is the Copilot Studio custom connector's OAuth delegated
+auth: the zero-secret managed-identity path for Power Platform connectors turned out to be an
+unreliable preview feature (see [ADR-0006](adr/0006-copilot-connector-managed-identity.md),
+superseded by [ADR-0007](adr/0007-copilot-connector-client-secret.md)), so that one integration
+uses a client secret stored in Key Vault — one exception, documented, not a silent departure
+from the pattern.
 
 ## Authorization: App Roles
 

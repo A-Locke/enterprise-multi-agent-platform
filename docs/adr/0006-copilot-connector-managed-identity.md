@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+**Superseded by [ADR-0007](0007-copilot-connector-client-secret.md).** The managed-identity option turned out to be an unstable preview feature: the current maker portal doesn't even surface the Security tab this decision depended on for our connector, and a prior attempt to reach it via a different flow deleted the connector outright rather than failing safely. ADR-0007 documents falling back to client-secret auth, backed by Key Vault. Left here for the historical record of the decision process — the zero-secrets reasoning was sound, the platform surface for it wasn't ready.
 
 ## Context
 

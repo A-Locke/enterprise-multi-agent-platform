@@ -265,9 +265,46 @@ hardcoded into the script) with a placeholder added to `.env.example`, and updat
 `scripts/setup-entra-app.ps1`'s redirect-URI block to register it from the environment when
 present. Re-ran the script to confirm both URIs now skip cleanly.
 
+### Fifth bug, and a pivot away from managed identity
+
+Past all four redirect/permission issues, sign-in reached actual token exchange and failed
+with `AADSTS7000215: Invalid client secret provided` — expected, since the connector was
+never given a secret (managed identity was always the plan). Attempting the portal-only
+managed-identity switch from ADR-0006 didn't go as documented: the current maker portal
+didn't surface a Security tab for the connector at all, and a prior attempt through it
+**deleted the connector outright** rather than failing safely — confirmed via `pac connector
+list` returning nothing afterward. Asked to research before touching anything again rather
+than retry blind a fifth time.
+
+Research (Microsoft's own custom-connector AAD-auth doc, plus real examples pulled from
+`microsoft/PowerPlatformConnectors`) confirmed managed identity is labeled **"Managed
+Identity (Preview)"** — undocumented, no CLI surface, and apparently not reliably reachable
+in the current portal for this connector. Decided with the user to fall back to standard
+client-secret OAuth instead, backed by Key Vault rather than a secret that exists only as a
+value once pasted into a portal field. Wrote [ADR-0007](docs/adr/0007-copilot-connector-client-secret.md),
+marked ADR-0006 superseded.
+
+Implementation: generated an Entra client secret (`az ad app credential reset --append`) and
+stored it in Key Vault, never in a file that could be committed. Storing it required a Key
+Vault RBAC grant (`Key Vault Secrets Officer`) for the local dev principal — same pattern as
+the Milestone 2 Azure OpenAI grant, confirmed with the user before running since it's a new
+role assignment. Hit an unrelated Git Bash gotcha along the way: `az role assignment create
+--scope /subscriptions/...` failed with a nonsensical `MissingSubscription` error until
+`MSYS_NO_PATHCONV=1` stopped Git Bash's MSYS layer from mangling the leading-slash resource
+ID into a Windows path.
+
+Checked real `microsoft/PowerPlatformConnectors` examples for the `aad` identity provider
+before assuming a `clientSecret` field belonged in `apiProperties.json` — it doesn't; the
+secret has always been a portal-only field (confirmed against the original ADR-0006 tutorial
+too), never part of the connector definition. So the "connector was deleted" symptom
+doubled as the explanation for "no Security tab": nothing existed there to show a tab for.
+Re-ran `scripts/setup-copilot-connector.ps1`, which found and updated a connector — `pac
+connector download` confirmed its live definition (client ID, tenant, scopes) and, notably,
+its redirect URL still matched the one already registered on the Entra app exactly, so no
+further Entra-side changes were needed there.
+
 ### Next steps
 
-- User completes `manual-setup.md` #9 (managed-identity toggle in the portal) with the corrected connector.
-- Wire the resulting redirect URI + federated credential into the app registration.
+- User retrieves the client secret from Key Vault locally and pastes it into the connector's Security tab (`manual-setup.md` #9).
 - Create and test a Connection.
 - Author the actual Copilot Studio agent (topics, generative orchestration, wiring this connector as a custom action), publish to a demo channel.

@@ -5,7 +5,8 @@ All notable changes to this project are documented in this file. Format loosely 
 ## [Unreleased] — Milestone 3: Copilot Studio Agent
 
 ### Added
-- ADR-0006: Copilot Studio custom connector uses managed identity + federated credential instead of a client secret — the connector calls the API as the signed-in user (preserving Milestone 1's per-user RBAC) without introducing this project's first stored secret. Reuses the existing API app registration.
+- ADR-0006: Copilot Studio custom connector uses managed identity + federated credential instead of a client secret — the connector calls the API as the signed-in user (preserving Milestone 1's per-user RBAC) without introducing this project's first stored secret. Reuses the existing API app registration. **Superseded by ADR-0007 below.**
+- ADR-0007: managed identity turned out to be an unreliable preview feature (undocumented, no CLI surface, and one portal attempt deleted the connector outright). Falls back to standard client-secret OAuth, secret stored in Key Vault rather than only ever existing as a value pasted into a portal field — this project's first stored secret, and a documented exception to its zero-secrets posture.
 - `power-platform/solutions/connectors/platform-api/`: custom connector definition (Swagger 2.0 + OAuth AAD properties), templated with placeholders, created live via `pac connector create`.
 - `scripts/setup-copilot-connector.ps1`: generates the real connector files from templates and creates or updates the connector (idempotent).
 
@@ -15,9 +16,10 @@ All notable changes to this project are documented in this file. Format loosely 
 - Apps created via `az ad app create` don't get the Microsoft Graph `User.Read` ("Sign in and read user profile") delegated permission that portal-created apps receive by default — without it, sign-in fails outright (`AADSTS90008`). Added and granted, also folded into `scripts/setup-entra-app.ps1`.
 - The app registration had no reply URL at all (`AADSTS500113`) — it was created purely as an API resource, never as an OAuth client. Registered Power Platform's bare custom-connector OAuth broker endpoint, read-merge-write to preserve room for other redirect URIs.
 - The bare endpoint alone wasn't sufficient (`AADSTS50011`) — Power Platform actually requires a connector-specific redirect URL (unique suffix per connector, confirmed via Microsoft's docs), copied from the connector's Security tab or, in this case, echoed back by the mismatch error itself. Registered alongside the bare one; stored as `COPILOT_CONNECTOR_REDIRECT_URI` in `.env` (not hardcoded) since it's an environment-specific value. `scripts/setup-entra-app.ps1` now registers both.
+- Past the redirect fix, token exchange failed with `AADSTS7000215: Invalid client secret provided` — expected, since no secret had ever been configured (managed identity was the plan). See ADR-0007: switched to client-secret auth instead after the managed-identity portal flow proved unreliable.
 
 ### Deferred (documented, not forgotten)
-- Switching the connector to managed-identity auth is portal-only, no CLI surface found — `manual-setup.md` #9. Federated credential + redirect URI wiring is ready to script as soon as the portal-generated values exist.
+- Pasting the Key-Vault-stored client secret into the connector's Security tab is portal-only — confirmed against real Microsoft connector examples that `apiProperties.json` has no field for it regardless of identity provider. `manual-setup.md` #9.
 
 ## [Milestone 2] — 2026-08-04 — Core Orchestration
 

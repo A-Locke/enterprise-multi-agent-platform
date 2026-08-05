@@ -17,6 +17,9 @@ found=0
 while IFS='=' read -r key value; do
   case "$key" in
     ''|'#'*) continue ;;
+    # Real values, but intentionally public -- the project's own name/region/env label,
+    # not a secret, credential, or identifier tied to a specific tenant/subscription/person.
+    'APIM_PUBLISHER_NAME'|'AZURE_ENV_NAME'|'AZURE_LOCATION') continue ;;
   esac
   # Trim whitespace/CR
   value=$(printf '%s' "$value" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')

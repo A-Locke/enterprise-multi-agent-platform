@@ -66,16 +66,16 @@ gh auth login   # already done for this environment
 
 **Action:** before `azd deploy`, ensure Docker Desktop is running (`docker info` succeeds). CI runners (GitHub-hosted) have Docker available by default, so this is a local-machine-only concern, not a CI blocker.
 
-## 9. Copilot Studio connector: switch to managed-identity authentication
+## 9. Copilot Studio connector: paste the client secret into the Security tab
 
-**Manual because:** the custom connector (`scripts/setup-copilot-connector.ps1`) is created via `pac connector create`, but switching its OAuth authentication from the default client-secret option to managed identity — the whole point of ADR-0006, avoiding a stored secret — has no CLI/API surface as of this writing. It's a toggle on the connector's Security tab in the maker portal, and the resulting issuer/subject identifier strings are only ever displayed there.
+**Manual because:** ADR-0006's managed-identity plan (no stored secret at all) turned out to depend on a "Managed Identity (Preview)" portal feature that wasn't reliably reachable — see [ADR-0007](docs/adr/0007-copilot-connector-client-secret.md), which falls back to standard client-secret OAuth instead. Confirmed against Microsoft's own certified-connector examples that the `aad` identity provider's connector definition has no `clientSecret` field at all — the secret has always been a value typed into the connector's Security tab in the maker portal, never something `pac connector create`/`update` can set from a file.
 
 **Action:**
-1. In [make.powerapps.com](https://make.powerapps.com) (signed in as the Power Platform organizational user) → **Custom connectors** → open "Multi-Agent Platform API" → **Security** tab.
-2. Identity Provider: **Azure Active Directory**. Select the **managed identity** option (not client secret). Save.
-3. Copy three values from the connector's details page: the **Redirect URL**, and the managed identity's **issuer** and **subject identifier**.
-4. Send those three values back so the redirect URI (`az ad app update --web-redirect-uris`) and federated credential (`az ad app federated-credential create`) can be added to the Entra app registration — both scriptable once these values are known, just not before.
-5. Create a **Connection** from the connector (one-time interactive sign-in) to confirm the trust works end-to-end before wiring it into Copilot Studio.
+1. Retrieve the secret yourself, locally — never paste it into chat or a file: `az keyvault secret show --vault-name <your-key-vault-name> --name copilot-connector-client-secret --query value -o tsv` (find the vault name with `az keyvault list -o table`; it's the one from Milestone 0's `azd provision`)
+2. In [make.powerapps.com](https://make.powerapps.com) (signed in as the Power Platform organizational user) → **Custom connectors** → open "Multi-Agent Platform API" → **Security** tab.
+3. Identity Provider: **Azure Active Directory**. Client ID is already set from `pac connector update`; paste the retrieved value into **Client secret**. Save.
+4. Create a **Connection** from the connector (one-time interactive sign-in) to confirm the trust works end-to-end before wiring it into Copilot Studio.
+5. The secret expires after 1 year (`az ad app credential list --id <api-app-id>` to check dates) — rotate by generating a new one, updating the Key Vault secret, and repeating steps 1–3.
 
 ---
 
