@@ -156,6 +156,41 @@ module apimApi './modules/apim-api.bicep' = {
   }
 }
 
+module knowledgeStorage './modules/knowledge-storage.bicep' = {
+  name: 'knowledge-storage'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    resourceToken: resourceToken
+    localDevPrincipalId: localDevPrincipalId
+    aiSearchPrincipalId: aiSearch.outputs.principalId
+  }
+}
+
+module aiSearch './modules/ai-search.bicep' = {
+  name: 'ai-search'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    resourceToken: resourceToken
+  }
+}
+
+// AI Search -> Azure OpenAI RBAC (for the embedding skill during indexing). Free tier's
+// managed identity works fine for this Search-service-to-Cognitive-Services direction --
+// it's specifically the Search-to-Storage direction that's key-gated on this tier (ADR-0010).
+module aiSearchOpenAiRbac './modules/ai-rbac.bicep' = {
+  name: 'ai-search-openai-rbac'
+  scope: rg
+  params: {
+    openAiName: ai.outputs.name
+    principalId: aiSearch.outputs.principalId
+    roleDefinitionId: ai.outputs.cognitiveServicesOpenAiUserRoleId
+  }
+}
+
 output RESOURCE_GROUP_NAME string = rg.name
 output LOG_ANALYTICS_WORKSPACE_ID string = logAnalytics.outputs.workspaceId
 output KEY_VAULT_NAME string = keyVault.outputs.name
@@ -171,3 +206,7 @@ output CONTAINER_APPS_ENVIRONMENT_NAME string = containerAppsEnv.outputs.name
 output CONTAINER_APP_API_NAME string = containerAppApi.outputs.name
 output CONTAINER_APP_API_FQDN string = containerAppApi.outputs.fqdn
 output APIM_API_PATH string = apimApi.outputs.apiPath
+output AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME string = ai.outputs.embeddingDeploymentName
+output KNOWLEDGE_STORAGE_NAME string = knowledgeStorage.outputs.name
+output KNOWLEDGE_STORAGE_CONTAINER_NAME string = knowledgeStorage.outputs.containerName
+output AI_SEARCH_NAME string = aiSearch.outputs.name

@@ -60,6 +60,32 @@ resource gpt5Mini 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' 
   }
 }
 
+// Embedding model for Milestone 5's RAG (AI Search's integrated vectorization skill).
+// GlobalStandard again, not DataZoneStandard -- same quota story as gpt-5-mini: this
+// subscription has 0 default quota for text-embedding-ada-002/3-large under GlobalStandard,
+// but 1000 for text-embedding-3-small (`az cognitiveservices usage list`), so that's the one
+// actually deployable here, not a preference judgment.
+resource embedding 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
+  parent: openAi
+  name: 'text-embedding-3-small'
+  // Cognitive Services rejects concurrent operations on sibling deployments under the same
+  // account (RequestConflict) -- explicit dependsOn forces sequential deployment instead of
+  // Bicep's default parallel-where-possible behavior.
+  dependsOn: [gpt5Mini]
+  sku: {
+    name: 'GlobalStandard'
+    capacity: modelCapacity
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: 'text-embedding-3-small'
+      version: '1'
+    }
+    versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
+  }
+}
+
 var cognitiveServicesOpenAiUserRoleId = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 
 resource localDevRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(localDevPrincipalId)) {
@@ -75,5 +101,6 @@ resource localDevRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04
 output name string = openAi.name
 output endpoint string = openAi.properties.endpoint
 output deploymentName string = gpt5Mini.name
+output embeddingDeploymentName string = embedding.name
 output resourceId string = openAi.id
 output cognitiveServicesOpenAiUserRoleId string = cognitiveServicesOpenAiUserRoleId
