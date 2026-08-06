@@ -471,15 +471,91 @@ Milestone 3 fix is airtight — not worth chasing further given it self-heals gr
 - Milestone 6: real Microsoft Graph actions for the Enterprise Integration Agent.
 - Sequence diagram for the full multi-agent path (parent → child → response) — deferred to accompany Milestone 5/6's real implementations rather than diagramming the placeholder state.
 
+## Milestone 5 — Knowledge Retrieval (RAG)
+
+**Status:** infrastructure complete and verified; Copilot Studio consumption not achieved
+**Date started:** 2026-08-05
+**Date completed (infrastructure):** 2026-08-06
+
+### Decision: native indexing + native knowledge connection, not custom Functions
+
+Same evaluation as every milestone since Milestone 4: Azure AI Search's own "Import and
+vectorize data" wizard (chunking, embedding, indexing directly from Blob, no custom code) plus
+Copilot Studio's native "Add knowledge → Azure AI Search" connection would remove an entire
+planned pro-code component (a custom Functions ingestion pipeline) if both worked. Corpus:
+this project's own documentation (~20,000 words across README/CHANGELOG/PROJECT_JOURNAL/ADRs)
+— zero copyright risk, self-referential, grows naturally. Full reasoning in
+[ADR-0010](docs/adr/0010-rag-native-ai-search.md).
+
+### Built and verified: the Azure-side pipeline works exactly as planned
+
+Provisioned Blob storage, a Free-tier AI Search service, and a `text-embedding-3-small`
+deployment. Real friction along the way, all resolved:
+
+- Cognitive Services rejected concurrent deployment operations on sibling resources under the
+  same OpenAI account (`RequestConflict`) — fixed with an explicit `dependsOn` forcing
+  sequential deployment instead of Bicep's default parallel-where-possible behavior.
+- `azd provision` demanded Docker for what should have been a pure infra change (same issue as
+  Milestone 4) — deployed directly via `az deployment sub create` instead.
+- Free-tier AI Search's "Import data" wizard forces managed identity for its Storage
+  connection with no visible way to switch to a key — initially assumed (per Microsoft's own
+  docs) this meant Free tier categorically couldn't do this without a key. Wrong: granting the
+  Search service's managed identity `Storage Blob Data Reader` on the storage account fixed it
+  outright, no key needed. ADR-0010 corrected accordingly.
+- The embedding skill then failed with `AuthenticationTypeDisabled` — it was trying key-based
+  auth against an OpenAI resource that has `disableLocalAuth: true` (deliberately, since
+  Milestone 2). Fixed by clearing the skillset's `apiKey` field via direct REST calls
+  (`GET`/`PUT` against the Search data-plane API), which makes it fall back to the service's
+  system-assigned identity automatically.
+- That REST access itself needed its own RBAC grants (`Search Service Contributor`, `Search
+  Index Data Contributor`) — subscription-level Owner doesn't cover Azure AI Search's separate
+  data-plane authorization model. Once granted, a background poll for propagation ran for over
+  50 minutes with no success — turned out to be a dead end entirely: the Search service's
+  `authOptions` defaulted to `apiKeyOnly`, meaning **no RBAC grant could ever have worked**
+  regardless of propagation time. A 403 that looked exactly like slow propagation was actually
+  a hard configuration gap the whole time. Fixed by setting `authOptions.aadOrApiKey`
+  explicitly in Bicep.
+
+Once all of that was in place: indexer ran successfully, **154/154 documents, 165 chunks**,
+verified live via the Search REST API and the portal's document count.
+
+### Not achieved: Copilot Studio couldn't consume the index
+
+Two independent attempts, both real platform walls rather than configuration mistakes:
+
+1. **Native "Add knowledge → Azure AI Search"** doesn't exist as an option for agents on the
+   **GitHub Copilot harness** (what every agent in this project runs on) — it's Standard-
+   harness-only, confirmed via Microsoft's harness documentation, with no migration path
+   between harnesses for an existing agent. Rebuilding Milestones 3 and 4's Copilot Studio
+   work from scratch for one knowledge-source type wasn't judged worth it.
+2. **Fallback: direct file upload** (a different, Dataverse-native pipeline, "Dataverse
+   intelligence for agents and AI experiences" — a Preview-labeled environment setting, off by
+   default, found only after the first attempt failed with `DataverseUnstructuredSearch
+   failed: 400`) got further — files attached, filenames recognized by the agent — but
+   indexing never left "In progress" after several hours, well past Microsoft's own stated
+   "may take several minutes." Confirmed genuinely stuck, not just slow. The maker Preview's
+   own per-file status detail panel also reliably hung the entire browser while checking on
+   this, independently reproduced in both Firefox and Edge.
+
+**Net result**: real, verified RAG infrastructure at the Azure level; no working path to
+surface it through Copilot Studio found in this session. Documented as two independent
+platform limitations (one architectural/permanent, one preview-feature reliability that may
+improve) rather than retried indefinitely — consistent with how Teams sign-in (Milestone 3/4)
+and the Outlook consent UI (Milestone 6) were handled.
+
+### Next steps
+
+- Revisit if Microsoft ships harness interoperability, or if the Dataverse intelligence preview stabilizes.
+- The AI Search index remains live and queryable directly (REST API) as a demonstrable artifact even without Copilot Studio integration.
+
 ## Milestone 6 — Workflow Automation & Enterprise Integration
 
 **Status:** in progress
 **Date started:** 2026-08-06
 
-Note: Milestone 5 (RAG) is still open as of this milestone starting — the Knowledge Agent's
-file-upload indexing was left running rather than declared failed, pending confirmation. Both
-milestones are being worked in parallel; Milestone 5's journal entry lands once its status is
-confirmed one way or the other.
+Note: worked in parallel with Milestone 5, which was still unresolved (file-upload indexing
+pending) when this milestone started — see Milestone 5's entry above for its final outcome
+(confirmed stuck after several hours, documented as a platform limitation).
 
 ### Decision: native M365 connectors, not custom Graph code
 

@@ -12,6 +12,27 @@ All notable changes to this project are documented in this file. Format loosely 
 - Teams testing blocked by the same tenant-origin Teams sign-in issue documented in Milestones 3/4 (`We couldn't find a Microsoft account`) — not re-investigated, already a known and accepted limitation.
 - Outlook's permission consent card doesn't render across three independently-tried surfaces (maker Preview in Firefox and Edge, End user preview toggle, a self-hosted Web app embed) — the agent correctly identifies the permission requirement and correctly refuses to bypass it (clean `user_declined_consent` reported rather than a fake success), so the integration itself is proven correctly wired; only the interactive consent UI is broken. Third distinct Copilot Studio consent/permission UI bug this project has hit (following the connector popup storm in Milestone 3 and the Dataverse knowledge-source panel hang in Milestone 5) — documented as a recurring platform-reliability finding, not chased across further surfaces.
 
+## [Milestone 5] — 2026-08-06 — Knowledge Retrieval (RAG)
+
+### Added
+- ADR-0010: RAG via Azure AI Search's native indexer (no custom Functions ingestion) and Copilot Studio's native knowledge connection — corpus is this project's own documentation (~20,000 words, zero copyright risk, self-referential).
+- `infra/modules/knowledge-storage.bicep`, `infra/modules/ai-search.bicep`: Blob storage + Free-tier AI Search service, deployed and live.
+- Embedding model deployment (`text-embedding-3-small`, `GlobalStandard`) added to the existing Azure OpenAI resource.
+
+### Fixed
+- Cognitive Services rejected concurrent deployments on sibling resources under the same account (`RequestConflict`) — fixed with an explicit `dependsOn` between the chat and embedding model deployments.
+- Free-tier AI Search's Storage connection initially assumed to require a key per Microsoft's docs — actually just needed the Search service's managed identity granted `Storage Blob Data Reader`, no key needed after all. ADR-0010 corrected in place.
+- Embedding skill failed with `AuthenticationTypeDisabled` (trying key-based auth against an OpenAI resource with `disableLocalAuth: true`) — fixed by clearing the skillset's `apiKey` field via direct REST calls, falling back to the Search service's system-assigned identity.
+- A 403 on the Search data-plane REST API that looked exactly like slow RBAC propagation (waited 50+ minutes) turned out to be a hard configuration gap instead — the service's `authOptions` defaulted to `apiKeyOnly`, making any RBAC grant permanently ineffective regardless of wait time. Fixed by setting `authOptions.aadOrApiKey` explicitly in Bicep.
+
+### Verified
+- AI Search indexer succeeded: 154/154 documents, 165 chunks indexed, confirmed live via the Search REST API and portal document count.
+
+### Known limitations
+- Copilot Studio can't consume the index: "Add knowledge → Azure AI Search" doesn't exist for agents on the GitHub Copilot harness (Standard-harness-only, no migration path between harnesses for an existing agent). Not pursued given the cost of rebuilding Milestones 3-4's Copilot Studio work for one feature.
+- Fallback direct file-upload knowledge source (a separate Dataverse-native pipeline, gated behind a Preview-labeled "Dataverse intelligence" environment setting found only after an initial `DataverseUnstructuredSearch failed: 400`) never completed indexing after several hours — confirmed stuck, not just slow. The maker Preview's per-file status panel also reliably hung the browser in both Firefox and Edge while checking on it.
+- Net: real, verified RAG infrastructure at the Azure level; no working Copilot Studio consumption path found. Documented as two independent platform limitations rather than retried indefinitely.
+
 ## [Milestone 4] — 2026-08-05 — Multi-Agent Coordination
 
 ### Added
