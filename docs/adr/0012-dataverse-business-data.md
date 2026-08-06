@@ -61,6 +61,37 @@ solution via `pac solution import` is scripted and reproducible from then on.
    building, so the whole schema is reproducible via `pac solution import` from a clean
    environment.
 
+## What actually happened building this
+
+The plan held up; a few real quirks along the way:
+
+- The Lookup column editor's "Related table" search didn't surface the built-in **User**
+  (`systemuser`) table at all while a table was still being created inline, tried "User,"
+  "Users," and "System User." Finishing the table first and adding the lookup as a separate
+  step afterward also failed the same way at first — and the attempt left behind a **Lookup
+  column self-referencing the table it was defined on**, which Dataverse won't let you delete
+  once created (Data Type and Related Table are locked immutable after creation, by design,
+  and this one has dependencies blocking removal entirely). Worked around it rather than
+  fighting it: left the broken column in place, unused, and created a second lookup column
+  (`UserLookup`) that correctly targets `systemuser` — the search worked normally on the
+  second attempt, so this reads as a transient/one-off UI glitch rather than a real limitation.
+- The table's auto-generated default form still referenced the broken column after
+  `UserLookup` was added — new columns don't automatically get added to existing forms, so
+  this needed a manual form edit (remove the stale field references, place the working one) as
+  its own follow-up step, not something either the table or column creation handled for you.
+- `pac solution export` needed a fresh interactive MFA re-authentication (`pac auth create`)
+  even though the same profile had been working all session for `pac connector`/`pac env`
+  operations — the same class of issue hit earlier with `pac admin list` (tenant-admin-scoped
+  operations apparently require a stronger auth context than environment-scoped ones).
+- The exported `Solution.xml` baked the live environment's org ID into the publisher's
+  auto-generated `UniqueName`/`LocalizedName` fields — not something typed in deliberately,
+  Dataverse derives it from the publisher's display name. Redacted to a plain alphanumeric
+  placeholder (`PowerPlatformOrgId` — publisher unique names only allow `[A-Za-z0-9_]`, so the
+  angle-bracket placeholder style used elsewhere in this repo isn't valid here). Confirmed via
+  a full solution reimport that the placeholder doesn't break anything — Dataverse just
+  recreates the publisher under that name on import, and the live environment's publisher
+  record now matches it too, so later exports come out clean without needing to redact again.
+
 ## Consequences
 
 **Positive:**
@@ -78,6 +109,10 @@ solution via `pac solution import` is scripted and reproducible from then on.
   agents yet (Copilot Studio doesn't write to Dataverse tables automatically just because they
   exist) — that wiring is deferred to Milestone 8 (Observability & Ops), where it belongs
   alongside the rest of this project's monitoring story rather than bolted on here.
+- One orphaned, undeletable Lookup column (self-referencing, from the first failed attempt at
+  the User relationship) sits unused on the Conversation Audit Log table — harmless, hidden
+  from the form, but a permanent artifact of that troubleshooting rather than something worth
+  further effort to remove.
 
 ## References
 

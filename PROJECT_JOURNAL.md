@@ -550,8 +550,9 @@ and the Outlook consent UI (Milestone 6) were handled.
 
 ## Milestone 6 — Workflow Automation & Enterprise Integration
 
-**Status:** in progress
+**Status:** complete (connectors built and correctly wired; end-to-end consent verification blocked by known platform UI issues)
 **Date started:** 2026-08-06
+**Date completed:** 2026-08-06
 
 Note: worked in parallel with Milestone 5, which was still unresolved (file-upload indexing
 pending) when this milestone started — see Milestone 5's entry above for its final outcome
@@ -617,3 +618,68 @@ evidence of a platform-side gap, not a configuration problem on this project's e
 - SharePoint/Planner connectors deferred (scope reduction, not a limitation — Teams/Outlook already prove the pattern).
 - Milestone 7: Business Data & Admin (Dataverse as primary datastore, Power Apps admin console) — also where Milestone 1's deferred Dataverse security roles finally land.
 - Revisit Milestone 5's status once file-upload indexing resolves.
+
+## Milestone 7 — Business Data & Admin
+
+**Status:** complete
+**Date started:** 2026-08-06
+**Date completed:** 2026-08-06
+
+### Decision: build once via portal, capture as a solution
+
+Dataverse table/role creation is technically scriptable via the Web API, but hand-authoring
+new-entity metadata blind (no existing schema to start from) is genuinely more error-prone
+than building it once in the maker portal, where the schema/relationship/role editors validate
+as you go. Decision: build via portal, immediately capture as a Dataverse solution
+(`pac solution export` + `unpack`) for future reproducibility — same template-then-generate
+discipline already established for the Milestone 3 connector. Full reasoning in
+[ADR-0012](docs/adr/0012-dataverse-business-data.md).
+
+### Built: two tables, three security roles, one admin app
+
+**Agent Configuration** (name, description, connector reference, active) and **Conversation
+Audit Log** (agent name, user, outcome summary) tables. Three security roles — **Admin**
+(full CRUD, organization-wide, both tables), **Agent.User** (read Agent Configuration
+org-wide; create + read-own on Conversation Audit Log — the row-level-security piece), and
+**Auditor** (read-only, organization-wide on both — the defining contrast with Agent.User's
+"own records only" scope) — finally closing the loop on the Dataverse security roles deferred
+all the way back in Milestone 1. A Power Apps model-driven **Platform Admin Console** app over
+both tables.
+
+Real friction along the way:
+
+- The Lookup column editor's search for the built-in **User** table came up empty while
+  creating the column inline during table creation — tried "User," "Users," "System User,"
+  none worked. Finishing the table first and adding the lookup afterward hit the same wall on
+  the first attempt too, and left behind a **self-referencing Lookup column** that Dataverse
+  won't allow deleting (Data Type/Related Table lock immutable after creation; this one also
+  has dependencies blocking removal). Rather than keep fighting it: left it in place, unused,
+  and created a second lookup (`UserLookup`) — which worked normally on the very next attempt,
+  reading as a one-off UI glitch rather than a real limitation.
+- The table's auto-generated default form still referenced the broken column after
+  `UserLookup` existed — new columns don't automatically land on existing forms. Needed a
+  manual form edit (remove the stale field, place the working one) as a separate follow-up
+  step. Also hit a moment of confusion removing the stale field from the *form* (a display-only
+  change) versus deleting the *column* (blocked) — different actions, easy to conflate.
+- `pac solution export` demanded a fresh interactive MFA re-authentication even though the same
+  `pac` profile had been working all session for connector/environment operations — same class
+  of issue as the earlier `pac admin list` MFA requirement (tenant-admin-scoped operations need
+  a stronger auth context than environment-scoped ones).
+- The exported `Solution.xml` baked the live org ID into the publisher's auto-generated name
+  fields — caught by the routine sensitive-content sweep before committing, redacted to a
+  plain alphanumeric placeholder (publisher unique names don't allow the angle-bracket style
+  used elsewhere in this repo). Verified the redaction doesn't break reimport — confirmed by
+  actually testing `scripts/deploy-business-data-solution.ps1` end-to-end against the live
+  environment, which also updated the live publisher to match, so later exports come out clean
+  without needing to redact again.
+
+### Verified
+
+- `scripts/deploy-business-data-solution.ps1` (pack + import) tested end-to-end against the
+  live environment — succeeded, confirming the whole schema really is reproducible from the
+  committed source, not just theoretically.
+- Confirmed the admin app opens and lists both tables after the form fix.
+
+### Next steps
+
+- Milestone 8: Observability & Ops — Azure Monitor + Power Platform analytics, alerts, troubleshooting guide. Also where the Conversation Audit Log gets actually wired to receive real entries from the live agents (not automatic just because the table exists).

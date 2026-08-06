@@ -2,7 +2,20 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 6: Workflow Automation & Enterprise Integration
+## [Unreleased] — Milestone 7: Business Data & Admin
+
+### Added
+- ADR-0012: Dataverse tables for agent configuration and audit logging — built once via the maker portal (no reliable CLI surface for new-entity metadata authoring), captured as a solution for reproducibility. Closes the loop on Milestone 1's deferred Dataverse security roles.
+- `Agent Configuration` and `Conversation Audit Log` Dataverse tables, plus **Admin**, **Agent.User**, and **Auditor** security roles scoped to them — Agent.User reads its own audit entries only (row-level security), Auditor reads everyone's, mirroring the Entra App Roles from Milestone 1.
+- **Platform Admin Console**, a Power Apps model-driven app over both tables.
+- `power-platform/solutions/business-data/`: the whole schema captured as a Dataverse solution, plus `scripts/deploy-business-data-solution.ps1` (pack + import), tested end-to-end against the live environment.
+
+### Fixed
+- A Lookup column's "Related table" search couldn't find the built-in User table while creating it inline during table creation, and left behind an undeletable self-referencing Lookup column on the first attempt — worked around by creating a second, correctly-configured lookup (`UserLookup`) rather than fighting the broken one further; it worked normally on retry.
+- The table's default form still referenced the broken column after the working one was added (new columns don't auto-appear on existing forms) — fixed with a manual form edit, re-captured into the solution.
+- The exported solution's `Solution.xml` baked the live org ID into the publisher's auto-generated name fields — caught by the routine sensitive-content sweep, redacted to a plain alphanumeric placeholder before committing.
+
+## [Milestone 6] — 2026-08-06 — Workflow Automation & Enterprise Integration
 
 ### Added
 - ADR-0011: Enterprise Integration Agent uses native Microsoft Teams and Office 365 Outlook connectors rather than custom Graph-calling code — same native-over-pro-code reasoning as ADR-0009/0010. Separated "enterprise integration" (this milestone) from "workflow automation" (Power Automate/Logic Apps/Service Bus — evaluated, not implemented, nothing here needs an async process).
