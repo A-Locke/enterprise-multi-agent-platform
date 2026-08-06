@@ -2,7 +2,17 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 4: Multi-Agent Coordination
+## [Unreleased] — Milestone 6: Workflow Automation & Enterprise Integration
+
+### Added
+- ADR-0011: Enterprise Integration Agent uses native Microsoft Teams and Office 365 Outlook connectors rather than custom Graph-calling code — same native-over-pro-code reasoning as ADR-0009/0010. Separated "enterprise integration" (this milestone) from "workflow automation" (Power Automate/Logic Apps/Service Bus — evaluated, not implemented, nothing here needs an async process).
+- Microsoft Teams ("List channels") and Office 365 Outlook ("SendEmailV2") Tools on the Enterprise Integration Agent, both set to per-user (**User**, not Maker) authentication — consistent with the delegated-auth principle held since Milestone 1.
+
+### Known limitations
+- Teams testing blocked by the same tenant-origin Teams sign-in issue documented in Milestones 3/4 (`We couldn't find a Microsoft account`) — not re-investigated, already a known and accepted limitation.
+- Outlook's permission consent card doesn't render across three independently-tried surfaces (maker Preview in Firefox and Edge, End user preview toggle, a self-hosted Web app embed) — the agent correctly identifies the permission requirement and correctly refuses to bypass it (clean `user_declined_consent` reported rather than a fake success), so the integration itself is proven correctly wired; only the interactive consent UI is broken. Third distinct Copilot Studio consent/permission UI bug this project has hit (following the connector popup storm in Milestone 3 and the Dataverse knowledge-source panel hang in Milestone 5) — documented as a recurring platform-reliability finding, not chased across further surfaces.
+
+## [Milestone 4] — 2026-08-05 — Multi-Agent Coordination
 
 ### Added
 - ADR-0009: Copilot Studio Connected Agents chosen over pro-code Semantic Kernel routing for multi-agent coordination — explicitly rejected the lower-friction pro-code option because this project exists to demonstrate Copilot Studio competency specifically, and Connected Agents can do the job.

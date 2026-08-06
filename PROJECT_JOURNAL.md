@@ -470,3 +470,74 @@ Milestone 3 fix is airtight — not worth chasing further given it self-heals gr
 - Milestone 5: real RAG capability for the Knowledge Agent (Azure AI Search + Blob + Functions ingestion).
 - Milestone 6: real Microsoft Graph actions for the Enterprise Integration Agent.
 - Sequence diagram for the full multi-agent path (parent → child → response) — deferred to accompany Milestone 5/6's real implementations rather than diagramming the placeholder state.
+
+## Milestone 6 — Workflow Automation & Enterprise Integration
+
+**Status:** in progress
+**Date started:** 2026-08-06
+
+Note: Milestone 5 (RAG) is still open as of this milestone starting — the Knowledge Agent's
+file-upload indexing was left running rather than declared failed, pending confirmation. Both
+milestones are being worked in parallel; Milestone 5's journal entry lands once its status is
+confirmed one way or the other.
+
+### Decision: native M365 connectors, not custom Graph code
+
+Same evaluation pattern as Milestones 4 and 5: Power Platform's prebuilt Microsoft Teams and
+Office 365 Outlook connectors cover this milestone's actual need (on-demand conversational
+actions) with zero custom code, rather than a Semantic Kernel Graph plugin or Azure Functions
+backend. Also separated "enterprise integration" (this milestone's real scope) from "workflow
+automation" (Power Automate/Logic Apps/Service Bus — evaluated, not implemented, since nothing
+here needs an async/background process). Full reasoning in
+[ADR-0011](docs/adr/0011-enterprise-integration-native-connectors.md).
+
+### Built: Teams + Outlook connectors on the Enterprise Integration Agent
+
+Added Microsoft Teams ("List channels") and Office 365 Outlook ("SendEmailV2") as Tools, both
+set to **User** authentication mode rather than Maker — consistent with the per-user delegated
+auth principle this project has held since Milestone 1 (Maker mode would run every action as
+the `admin` account regardless of who's actually talking to the agent, breaking that model).
+Updated the agent's instructions past the Milestone 4 placeholder, including an explicit
+instruction to confirm details before taking actions with real side effects (sending email)
+rather than guessing.
+
+### Testing: real UI blockers on two independent connectors, correct behavior where testable
+
+**Teams**: blocked immediately by the same Teams sign-in issue already documented in
+Milestones 3/4 (`We couldn't find a Microsoft account` — the personal-account-derived tenant
+confusing Teams' sign-in detection, per ADR-0004). Not re-investigated; already a known,
+accepted limitation, and switching Copilot Studio harness (raised as a possible option if this
+recurred) wouldn't fix a Teams-client-level sign-in bug regardless.
+
+**Outlook**: more interesting failure. The agent correctly identified the `SendEmailV2` action
+needing permission, and when explicitly asked to "auto-approve" the action via a text
+instruction, correctly refused and reported a clean `user_declined_consent` rather than faking
+success — the safety behavior worked exactly as designed. But the actual interactive
+permission card never rendered, across three independent surfaces tried in order:
+
+1. The maker Preview pane — confirmed across both Firefox and Edge, ruling out a
+   browser-specific bug.
+2. The **End user preview** toggle — no different.
+3. A **Web app** channel embed, self-hosted locally (`python -m http.server`) to test outside
+   Copilot Studio's own UI chrome entirely — hit a *different* wall first (`You don't have
+   access to talk to this bot`), confirmed not a session/cookie issue (same browser/profile as
+   the authenticated maker session), and never got far enough to test the permission card at
+   all.
+
+This is the third distinct Copilot Studio consent/permission UI bug this project has
+documented (the connector "Manage your connections" popup storm in Milestone 3, the Dataverse
+knowledge-source detail panel hanging the browser in Milestone 5, now this) — a real pattern
+worth naming as a finding in its own right: this platform's interactive consent surfaces are
+currently the least reliable part of the authoring experience, consistently across different
+specific features. The underlying integrations themselves (connector wiring, RBAC, delegated
+auth design) have been correct every time; what fails is the UI asking a human to click
+"Allow."
+
+Not pursuing further UI surfaces to test this on — three independent attempts is enough
+evidence of a platform-side gap, not a configuration problem on this project's end.
+
+### Next steps
+
+- SharePoint/Planner connectors deferred (scope reduction, not a limitation — Teams/Outlook already prove the pattern).
+- Milestone 7: Business Data & Admin (Dataverse as primary datastore, Power Apps admin console) — also where Milestone 1's deferred Dataverse security roles finally land.
+- Revisit Milestone 5's status once file-upload indexing resolves.
