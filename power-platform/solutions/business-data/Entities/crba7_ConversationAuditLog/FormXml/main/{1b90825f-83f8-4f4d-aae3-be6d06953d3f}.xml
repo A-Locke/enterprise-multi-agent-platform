@@ -44,11 +44,11 @@
                       </cell>
                     </row>
                     <row>
-                      <cell id="{0a0d0b61-88f6-4754-9923-232701ad7187}">
+                      <cell id="{7cb0de12-b840-4233-0662-aa0c07b8a9ce}" showlabel="true" locklevel="0">
                         <labels>
-                          <label description="User" languagecode="1033" />
+                          <label description="UserLookup" languagecode="1033" />
                         </labels>
-                        <control id="crba7_user" classid="{270bd3db-d9af-4782-9025-509e298dec0a}" datafieldname="crba7_user" />
+                        <control id="crba7_userlookup" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="crba7_userlookup" disabled="false" />
                       </cell>
                     </row>
                     <row>
@@ -66,6 +66,36 @@
           </columns>
         </tab>
       </tabs>
+      <Navigation>
+        <NavBar></NavBar>
+        <NavBarAreas>
+          <NavBarArea Id="Info">
+            <Titles>
+              <Title LCID="1033" Text="Common" />
+            </Titles>
+          </NavBarArea>
+          <NavBarArea Id="Sales">
+            <Titles>
+              <Title LCID="1033" Text="Sales" />
+            </Titles>
+          </NavBarArea>
+          <NavBarArea Id="Service">
+            <Titles>
+              <Title LCID="1033" Text="Service" />
+            </Titles>
+          </NavBarArea>
+          <NavBarArea Id="Marketing">
+            <Titles>
+              <Title LCID="1033" Text="Marketing" />
+            </Titles>
+          </NavBarArea>
+          <NavBarArea Id="ProcessCenter">
+            <Titles>
+              <Title LCID="1033" Text="Process Sessions" />
+            </Titles>
+          </NavBarArea>
+        </NavBarAreas>
+      </Navigation>
     </form>
     <IsCustomizable>1</IsCustomizable>
     <CanBeDeleted>1</CanBeDeleted>
