@@ -105,3 +105,4 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' e
 output name string = containerApp.name
 output principalId string = containerApp.identity.principalId
 output fqdn string = containerApp.properties.configuration.ingress.fqdn
+output resourceId string = containerApp.id

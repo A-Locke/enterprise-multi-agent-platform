@@ -56,3 +56,4 @@ resource apimDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-previ
 
 output name string = apim.name
 output gatewayUrl string = apim.properties.gatewayUrl
+output resourceId string = apim.id

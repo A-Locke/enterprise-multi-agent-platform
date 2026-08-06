@@ -191,6 +191,16 @@ module aiSearchOpenAiRbac './modules/ai-rbac.bicep' = {
   }
 }
 
+module monitoring './modules/monitoring.bicep' = {
+  name: 'monitoring'
+  scope: rg
+  params: {
+    notificationEmail: budgetNotificationEmail
+    containerAppResourceId: containerAppApi.outputs.resourceId
+    apimResourceId: apim.outputs.resourceId
+  }
+}
+
 output RESOURCE_GROUP_NAME string = rg.name
 output LOG_ANALYTICS_WORKSPACE_ID string = logAnalytics.outputs.workspaceId
 output KEY_VAULT_NAME string = keyVault.outputs.name
