@@ -2,7 +2,20 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 7: Business Data & Admin
+## [Unreleased] — Milestone 8: Observability & Ops
+
+### Added
+- `infra/modules/monitoring.bicep`: two Azure Monitor metric alerts (Container App restart-spike, APIM failed-requests) plus an email action group, deployed and verified live.
+- `docs/troubleshooting.md`: symptom-indexed reference across every real issue this project has hit, linking back to the relevant ADR/journal entry rather than duplicating it.
+- `docs/observability.md`: ties together the new alerts and a review of Power Platform's native analytics — no custom tooling needed there, the native surfaces (Copilot Studio Analytics, Dataverse auditing) already cover this project's needs.
+
+### Fixed
+- The restart-spike alert false-fired within hours of deployment — `RestartCount` is a cumulative gauge, not a per-interval delta, and the alert's `Total` (Sum) aggregation summed three consecutive readings of the same steady value into an artificial spike with zero real restarts in the window. Root-caused by pulling the raw metric values directly rather than trusting the alert's own interpretation; fixed by switching to `Maximum` aggregation.
+
+### Known gaps
+- Application Insights has been provisioned since Milestone 0 but was never wired into the API's application code — real APM/tracing would need an SDK change out of scope for this milestone's alerting-focused needs. Documented, not silently left.
+
+## [Milestone 7] — 2026-08-06 — Business Data & Admin
 
 ### Added
 - ADR-0012: Dataverse tables for agent configuration and audit logging — built once via the maker portal (no reliable CLI surface for new-entity metadata authoring), captured as a solution for reproducibility. Closes the loop on Milestone 1's deferred Dataverse security roles.

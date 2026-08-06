@@ -683,3 +683,49 @@ Real friction along the way:
 ### Next steps
 
 - Milestone 8: Observability & Ops — Azure Monitor + Power Platform analytics, alerts, troubleshooting guide. Also where the Conversation Audit Log gets actually wired to receive real entries from the live agents (not automatic just because the table exists).
+
+## Milestone 8 — Observability & Ops
+
+**Status:** in progress
+**Date started:** 2026-08-06
+
+### Built: Azure Monitor alerts
+
+Two metric alerts + an email action group (`infra/modules/monitoring.bicep`): a Container App
+restart-spike alert and an APIM failed-requests alert. Discovered along the way that
+Application Insights — provisioned since Milestone 0 — was never actually wired into the API's
+application code, a real, documented gap rather than something worth quietly building around;
+full APM/tracing would need an SDK change out of scope for this milestone's alerting needs.
+Deferred, noted in `docs/observability.md`.
+
+### Real finding: the restart alert false-fired, and why
+
+Within hours of deployment, the restart-spike alert fired for real (a genuine end-to-end
+Azure Monitor → action group → email pipeline validation) and resolved 25 minutes later.
+Investigated rather than assumed benign, since the alert was specifically designed to catch
+crash loops (3+ restarts in 15 minutes), not the single occasional restart already documented
+as expected in Milestone 4.
+
+Checked Container App logs across a 6-hour window around the alert — zero restart events
+logged at all, which didn't match "a crash loop just happened." Pulled the raw `RestartCount`
+metric values directly instead of trusting the alert's own interpretation: the metric had been
+sitting at a steady cumulative value of 1 (matching the single restart Milestone 4 already
+documented) for the entire day, never actually increasing. The alert's `Total` (Sum)
+aggregation over its 15-minute window summed three consecutive 5-minute readings of that same
+steady "1" into an artificial "3" — `RestartCount` is a cumulative gauge (current total for
+the replica), not a per-interval delta of new restarts, so summing it inflates a fake spike out
+of a resource that hadn't restarted at all during that window. Fixed by switching to `Maximum`
+aggregation, which reads the real cumulative value instead of multiplying it. Redeployed,
+confirmed the corrected aggregation is live.
+
+Worth calling out as a finding in its own right: the *mistake* was in the alert's own design
+(a genuinely easy one to make — `Total`/Sum is often the intuitive default for "how many
+events happened"), not in Azure Monitor or the Container App. The whole point of building
+monitoring is to catch exactly this kind of thing before it matters in a real incident — this
+is that loop working as intended, just against a bug in the observability tooling itself
+rather than the thing it was watching.
+
+### Documentation
+
+- `docs/troubleshooting.md`: symptom-indexed reference across the whole project's real issues (Entra self-reference quirks, Copilot Studio licensing/consent UI bugs, AI Search auth traps, Dataverse Lookup glitches, local tooling gotchas), linking back to the ADRs/journal for detail rather than duplicating it.
+- `docs/observability.md`: ties together the Azure Monitor alerts and a review of Power Platform's native analytics (Copilot Studio Analytics tab, Dataverse auditing) — no custom tooling needed on the Power Platform side, the native surfaces already cover this project's needs.

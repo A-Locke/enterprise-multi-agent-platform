@@ -20,11 +20,15 @@ have adequate native tooling on their own.
   visibility.
 - **Alerts** (`infra/modules/monitoring.bicep`, Milestone 8): two metric alerts, one email
   action group.
-  - `alert-containerapp-restart-spike`: fires on 3+ restarts in 15 minutes. Deliberately not
-    any single restart — Milestone 4 already documented that Container Apps can legitimately
-    recycle a replica occasionally even with `minReplicas: 1` (platform-level node patching,
-    health-probe hiccups), which is expected, self-healing behavior, not a page-worthy event.
-    A crash loop (repeated restarts) is the actual signal.
+  - `alert-containerapp-restart-spike`: fires once the current replica has accumulated 3+
+    total restarts (`RestartCount`, `Maximum` aggregation — not any single restart, which
+    Milestone 4 already documented as expected, self-healing platform behavior with
+    `minReplicas: 1`). Originally used `Total` (Sum) aggregation, which false-fired within
+    hours of deployment — `RestartCount` is a cumulative gauge, not a per-interval delta, so
+    summing three consecutive readings of the same steady value inflated an artificial spike
+    out of zero real restarts. Caught via the alert's own email notification, root-caused by
+    querying the raw metric values directly, fixed by switching to `Maximum`. Full writeup in
+    `PROJECT_JOURNAL.md`, Milestone 8.
   - `alert-apim-failed-requests`: fires on 5+ failed requests in 15 minutes — catches
     backend-down or auth-misconfiguration scenarios at the gateway.
 - **Cost Management budget** (`budget-monthly-guardrail`, Milestone 0) — not traditionally
