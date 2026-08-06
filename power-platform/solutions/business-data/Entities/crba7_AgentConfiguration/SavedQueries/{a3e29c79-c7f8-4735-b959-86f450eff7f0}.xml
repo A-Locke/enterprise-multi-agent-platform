@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{a3e29c79-c7f8-4735-b959-86f450eff7f0}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="crba7_agentname" select="1" icon="1" preview="1">
+        <row name="result" id="crba7_agentconfigurationid">
+          <cell name="crba7_agentname" width="300" />
+          <cell name="crba7_description" width="150" />
+          <cell name="crba7_connectorreference" width="150" />
+          <cell name="crba7_active" width="150" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>0</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="crba7_agentconfiguration">
+          <attribute name="crba7_agentconfigurationid" />
+          <attribute name="crba7_agentname" />
+          <attribute name="createdon" />
+          <order attribute="crba7_agentname" descending="false" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+          <attribute name="crba7_description" />
+          <attribute name="crba7_connectorreference" />
+          <attribute name="crba7_active" />
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Active Agent Configurations" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>

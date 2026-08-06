@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <EntityRelationship Name="business_unit_crba7_agentconfiguration" />
+  <EntityRelationship Name="business_unit_crba7_conversationauditlog" />
+  <EntityRelationship Name="crba7_conversationauditlog_User_crba7_conversationauditlog" />
+  <EntityRelationship Name="crba7_conversationauditlog_UserLookup_systemuser" />
+  <EntityRelationship Name="lk_crba7_agentconfiguration_createdby" />
+  <EntityRelationship Name="lk_crba7_agentconfiguration_modifiedby" />
+  <EntityRelationship Name="lk_crba7_conversationauditlog_createdby" />
+  <EntityRelationship Name="lk_crba7_conversationauditlog_modifiedby" />
+  <EntityRelationship Name="owner_crba7_agentconfiguration" />
+  <EntityRelationship Name="owner_crba7_conversationauditlog" />
+  <EntityRelationship Name="team_crba7_agentconfiguration" />
+  <EntityRelationship Name="team_crba7_conversationauditlog" />
+  <EntityRelationship Name="user_crba7_agentconfiguration" />
+  <EntityRelationship Name="user_crba7_conversationauditlog" />
+</EntityRelationships>

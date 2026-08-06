@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{7fb18ee5-4ac5-4362-b14d-6b96dbf178a1}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="crba7_logentry" select="1" icon="1" preview="1">
+        <row name="result" id="crba7_conversationauditlogid">
+          <cell name="crba7_logentry" width="300" />
+          <cell name="crba7_agentname" width="150" />
+          <cell name="crba7_user" width="150" />
+          <cell name="crba7_outcomesummary" width="150" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>0</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="crba7_conversationauditlog">
+          <attribute name="crba7_conversationauditlogid" />
+          <attribute name="crba7_logentry" />
+          <attribute name="createdon" />
+          <order attribute="crba7_logentry" descending="false" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+          <attribute name="crba7_agentname" />
+          <attribute name="crba7_user" />
+          <attribute name="crba7_outcomesummary" />
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Active Conversation Audit Logs" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>
