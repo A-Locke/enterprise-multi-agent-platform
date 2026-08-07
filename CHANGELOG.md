@@ -2,15 +2,17 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — Milestone 8: Observability & Ops
+## [Milestone 8] — 2026-08-07 — Observability & Ops
 
 ### Added
 - `infra/modules/monitoring.bicep`: two Azure Monitor metric alerts (Container App restart-spike, APIM failed-requests) plus an email action group, deployed and verified live.
 - `docs/troubleshooting.md`: symptom-indexed reference across every real issue this project has hit, linking back to the relevant ADR/journal entry rather than duplicating it.
 - `docs/observability.md`: ties together the new alerts and a review of Power Platform's native analytics — no custom tooling needed there, the native surfaces (Copilot Studio Analytics, Dataverse auditing) already cover this project's needs.
+- The **Microsoft Dataverse** connector ("Add a new row") wired to the parent agent, Maker authentication mode, silently logging a Conversation Audit Log entry after every response.
 
 ### Fixed
 - The restart-spike alert false-fired within hours of deployment — `RestartCount` is a cumulative gauge, not a per-interval delta, and the alert's `Total` (Sum) aggregation summed three consecutive readings of the same steady value into an artificial spike with zero real restarts in the window. Root-caused by pulling the raw metric values directly rather than trusting the alert's own interpretation; fixed by switching to `Maximum` aggregation.
+- Every Conversation Audit Log write failed with `400`: the Milestone 7 orphaned self-referencing column, previously assessed as harmless, turned out to break every create request through the generic Dataverse connector (a present-but-null navigation property is invalid OData). Fixed by deleting the column's owning relationship (the column itself stayed undeletable directly) after clearing two dependencies surfaced by Dataverse's own Dependencies panel — a stale system view and an auto-generated "AI Skill Config" object from the Dataverse intelligence setting enabled in Milestone 5. ADR-0012 corrected.
 
 ### Known gaps
 - Application Insights has been provisioned since Milestone 0 but was never wired into the API's application code — real APM/tracing would need an SDK change out of scope for this milestone's alerting-focused needs. Documented, not silently left.

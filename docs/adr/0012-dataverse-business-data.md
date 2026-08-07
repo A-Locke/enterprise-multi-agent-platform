@@ -105,14 +105,19 @@ The plan held up; a few real quirks along the way:
 **Negative / accepted trade-offs:**
 - The one-time manual build step is real — no way around it for genuinely new schema
   authoring, same category of limitation as Copilot Studio's own agent authoring.
-- The Conversation Audit Log isn't wired to actually *receive* real audit entries from the live
-  agents yet (Copilot Studio doesn't write to Dataverse tables automatically just because they
-  exist) — that wiring is deferred to Milestone 8 (Observability & Ops), where it belongs
-  alongside the rest of this project's monitoring story rather than bolted on here.
-- One orphaned, undeletable Lookup column (self-referencing, from the first failed attempt at
-  the User relationship) sits unused on the Conversation Audit Log table — harmless, hidden
-  from the form, but a permanent artifact of that troubleshooting rather than something worth
-  further effort to remove.
+- The Conversation Audit Log wasn't wired to actually *receive* real audit entries from the
+  live agents yet as of this ADR's original writing — deferred to Milestone 8 (Observability &
+  Ops) on purpose, where it belongs alongside the rest of this project's monitoring story. See
+  `PROJECT_JOURNAL.md`, Milestone 8, for the outcome.
+- **Correction**: the orphaned self-referencing Lookup column from the first failed attempt at
+  the User relationship was originally assessed here as "harmless... not worth further effort
+  to remove." That was wrong — it broke *every* write to this table through the generic
+  Dataverse connector (a present-but-null navigation property is invalid OData, regardless of
+  whether anything actually references the column's value), discovered only when Milestone 8
+  tried to actually write to the table for the first time. Deleted via its owning relationship
+  once found — see Milestone 8's journal entry for the full diagnosis and fix. Worth noting as
+  a process lesson: "unused and hidden from the UI" isn't the same as "inert" for a column that
+  still exists in the table's metadata and gets serialized into every API request against it.
 
 ## References
 
