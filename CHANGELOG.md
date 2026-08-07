@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Milestone 10] — 2026-08-07 — Hardening & Docs finalization
+
+### Added
+- `infra/modules/content-safety.bicep`, `apps/api/app/content_safety.py`: Azure AI Content Safety, F0 tier, managed-identity auth, input moderation on `/agent/chat` (severity ≥ 2 blocks, fails open on service errors). ADR-0014. Deployed and verified live via the Milestone 9 OIDC pipeline.
+- `apps/api/tests/test_content_safety.py`: unit coverage for the block/allow/fail-open paths. Required adding `pytest-asyncio` (`asyncio_mode = "auto"`) — this project's test suite had never needed direct async tests before.
+- `docs/deliverables/`: eight consulting-facing deliverables (executive overview, solution proposal, assumptions and constraints, risk register, cost estimate, roadmap, technical handover, operations handover).
+- `docs/demo-script.md`: beat-by-beat demo recording script.
+
+### Changed
+- `docs/security-model.md`: full refresh — Dataverse security roles and the CI/CD OIDC pipeline updated from "planned" to their real, implemented state; new Identity and Known limitations entries for both CI/CD workload identities.
+- `docs/cost-analysis.md`: full refresh — Azure Functions/Service Bus/Fabric/Purview reframed from "planned" to "evaluated, not built" with their actual ADR-backed reasoning; added the second Dataverse environment, Content Safety, and both CI/CD identities; added an actual-spend section ($0.39 of $180 through Milestone 10).
+- `README.md`: Status section rewritten (was stale since Milestone 2); documentation table updated with all docs added since.
+
+Full detail on the Content Safety decision in [ADR-0014](docs/adr/0014-content-safety.md) and `PROJECT_JOURNAL.md`.
+
 ## [Milestone 9] — 2026-08-07 — ALM & Governance
 
 ### Added

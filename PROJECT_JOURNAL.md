@@ -875,3 +875,86 @@ environment via a direct API query.
 ### Next steps
 
 - Milestone 10: Hardening & Docs finalization — security review (incl. Content Safety), full cost analysis (Azure + Power Platform licensing), documentation pass, demo recording, roadmap.
+
+## Milestone 10 — Hardening & Docs finalization
+
+**Status:** complete
+**Date started:** 2026-08-07
+**Date completed:** 2026-08-07
+
+### Security: Azure AI Content Safety, implemented not just documented
+
+`docs/security-model.md` had carried Azure AI Content Safety as a "known limitation, not
+implemented" item since Milestone 2. Rather than leave it as a documented gap for the
+hardening milestone, built it for real: a dedicated Content Safety resource
+(`infra/modules/content-safety.bicep`, F0 tier, managed-identity auth — `disableLocalAuth:
+true` like every other Cognitive Services resource in this project), wired into `/agent/chat`
+as an input-moderation check before the message reaches Semantic Kernel/Azure OpenAI
+(`apps/api/app/content_safety.py`). Severity ≥ 2 in any harm category blocks the request;
+the check fails open (proceeds) rather than closed if the service itself errors, since an
+optional defense-in-depth layer becoming a denial-of-service vector on its own outage would
+be a worse trade. See [ADR-0014](docs/adr/0014-content-safety.md).
+
+The `ai-rbac.bicep` module (originally written for Container App → Azure OpenAI RBAC in
+Milestone 2) turned out to be fully reusable for Content Safety RBAC too, with zero changes —
+its `existing` resource lookup is kind-agnostic despite the `openAiName` parameter name, a
+small confirmation that the RBAC pattern established early generalized cleanly.
+
+Deployed and verified live via the Milestone 9 OIDC pipeline (a real second use of that
+pipeline, not just its original test) — confirmed the Content Safety resource exists, all
+three expected role assignments are present on the Container App's identity (`AcrPull`,
+`Cognitive Services OpenAI User`, `Cognitive Services User`), the endpoint env var landed
+correctly, and the deployed app's `/health` endpoint returns `200` (confirming the new
+import didn't break app startup). Full interactive functional testing (an actual blocked
+message via a real user token) is covered by unit tests
+(`apps/api/tests/test_content_safety.py`) rather than live-tested here, since that needs an
+interactive device-code sign-in.
+
+Along the way: adding `test_content_safety.py`'s bare `async def test_*` functions surfaced
+that this project's test suite had never needed direct async tests before (every other test
+goes through FastAPI's synchronous `TestClient`) — they were silently skipped, not failed,
+until `pytest-asyncio` was added and configured (`asyncio_mode = "auto"`). A quiet gap that
+would have shipped as "3 passed" tests that never actually ran, if not for `pytest -v`
+showing `SKIPPED` explicitly rather than just a lower total count.
+
+### Documentation: bringing everything current, not just adding new pages
+
+`docs/security-model.md` and `docs/cost-analysis.md` had both drifted significantly from
+reality — the security doc still framed Dataverse security roles and the CI/CD OIDC pipeline
+as "planned," and the cost doc still listed Azure Functions, Service Bus, Microsoft Fabric,
+and Purview as "planned" for milestones that had long since concluded they weren't needed
+(ADR-0010, ADR-0011). Rather than patch individual lines, did a full pass on both: every
+"planned" that had actually shipped got marked real with its ADR reference, and every
+"planned" that was actually evaluated-and-not-built got reframed honestly as that outcome,
+not silently dropped. `README.md`'s Status section had been stale since Milestone 2
+("Milestones 0–2 complete... starting Milestone 3 next") — rewritten to reflect the real,
+current architecture.
+
+Wrote the eight consulting-facing deliverables originally scaffolded as an empty
+`docs/deliverables/` folder back in Milestone 0's plan: executive overview, solution
+proposal, assumptions and constraints, risk register, cost estimate (a directional
+production-scale projection, distinct from `docs/cost-analysis.md`'s actual-spend tracking),
+roadmap, and technical + operations handover guides. Each one derived from real ADRs/journal
+content rather than written speculatively — the risk register in particular traces every row
+back to a specific documented limitation or incident rather than a generic checklist.
+
+Wrote `docs/demo-script.md` — a beat-by-beat recording script — since an actual demo
+recording is a human action this session can't perform directly.
+
+### Cost check
+
+Azure spend at Milestone 10 close: **$0.39 of the $180 monthly guardrail** — unchanged in any
+meaningful way since early in the build. Every resource added since (AI Search, the second
+Dataverse environment, both CI/CD identities, Content Safety) is free-tier by design,
+confirmed via `az consumption budget list` immediately after each deployment rather than
+assumed. Power Platform licensing similarly stayed at $0 — both Dataverse environments are
+Developer Plan (free, non-production), and Copilot Studio never moved past its free trial for
+build/test use.
+
+### Next steps
+
+This closes the planned milestone sequence (0–10). Remaining open items are tracked in
+[`docs/deliverables/roadmap.md`](docs/deliverables/roadmap.md) rather than as a "next
+milestone" — the near-term list (Application Insights wiring, least-privilege Dataverse CI/CD
+role, a third Power Platform environment) is real, prioritized, and ready to pick up
+independently of any further numbered milestone.
