@@ -42,7 +42,15 @@ jobs:
         shell: bash
 
       - name: Provision Infrastructure
-        run: azd provision --no-prompt
+        run: |
+          azd env new "$AZURE_ENV_NAME" --no-prompt
+          # azd normally resolves this by looking up the interactively signed-in user via
+          # Microsoft Graph -- there is no such user under federated/managed-identity CI
+          # auth, so it must be set explicitly per-environment or `azd provision` fails at
+          # "fetching current principal id" (see .env.example for where this value comes from).
+          azd env set AZURE_PRINCIPAL_ID "$AZURE_PRINCIPAL_ID"
+          azd provision --no-prompt
+        shell: bash
 
       - name: Deploy Application
         run: azd deploy --no-prompt
