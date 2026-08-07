@@ -85,6 +85,7 @@
       <RootComponent type="20" id="{43f264e4-c291-f111-8077-7ced8d44b013}" behavior="0" />
       <RootComponent type="20" id="{4cb035e1-c491-f111-8077-7ced8d44b013}" behavior="0" />
       <RootComponent type="20" id="{62e02df9-c391-f111-8077-7ced8d44b013}" behavior="0" />
+      <RootComponent type="62" schemaName="crba7_PlatformAdminConsole" behavior="0" />
       <RootComponent type="80" schemaName="crba7_PlatformAdminConsole" behavior="0" />
     </RootComponents>
     <MissingDependencies></MissingDependencies>
