@@ -1,0 +1,45 @@
+# Manual trigger only -- matches azure-dev.yml's practice of deliberate, reviewed
+# deployments rather than deploying on every push. Promotes the source-controlled
+# business-data solution (power-platform/solutions/business-data) from the dev environment,
+# where it's authored via the maker portal and captured with `pac solution export`, into the
+# test environment as a managed solution.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Test Environment
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pac CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      - name: Pack solution (managed)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: power-platform/solutions/business-data
+          solution-file: ${{ runner.temp }}\business-data-managed.zip
+          solution-type: Managed
+
+      - name: Who am I (verify service principal auth before import)
+        uses: microsoft/powerplatform-actions/who-am-i@v1
+        with:
+          environment-url: ${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_ID }}
+          client-secret: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Import solution into test environment
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_ID }}
+          client-secret: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          path: ${{ runner.temp }}\business-data-managed.zip
+          publish-changes: true

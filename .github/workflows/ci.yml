@@ -95,6 +95,29 @@ jobs:
           azd provision --preview
         shell: bash
 
+  validate-power-platform-solution:
+    name: Validate Power Platform Solution
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pac CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      - name: Pack solution (validates schema/XML integrity)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: power-platform/solutions/business-data
+          solution-file: ${{ runner.temp }}\business-data.zip
+          solution-type: Unmanaged
+
+      - name: Unpack packed zip (validates the produced package is well-formed)
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: ${{ runner.temp }}\business-data.zip
+          solution-folder: ${{ runner.temp }}\business-data-roundtrip
+          solution-type: Unmanaged
+
   # Added as each milestone introduces the corresponding app:
   # - apps/functions (pytest)
   # - apps/web (lint, type-check, unit tests)
