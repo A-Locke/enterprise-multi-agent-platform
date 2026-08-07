@@ -607,17 +607,33 @@ permission card never rendered, across three independent surfaces tried in order
    the authenticated maker session), and never got far enough to test the permission card at
    all.
 
-This is the third distinct Copilot Studio consent/permission UI bug this project has
-documented (the connector "Manage your connections" popup storm in Milestone 3, the Dataverse
+Followed up further before concluding: switched the connector's authentication mode from User
+to Maker (reusing an already-consented connection, requiring no new interactive OAuth at all)
+— still failed, ruling out "broken interactive consent flow" as the whole explanation. Checked
+the `SendEmailV2` action's own parameters for a different explanation: a **"From (Send as)"**
+field defaulting to AI-filled rather than a fixed value, which per its own description
+requires separate Exchange-level "Send as"/"Send on behalf of" permission — a plausible,
+genuinely different root cause. Set it explicitly to a fixed value; still failed. Finally
+tested directly on the Enterprise Integration Agent's own Preview (rather than through the
+parent's delegation) — this time the permission card **did** render, with visible Allow/Deny
+buttons. Clicked Allow. Still failed: the connector re-prompted for consent twice more even
+after retrying, and the email was never sent.
+
+This is the third distinct Copilot Studio consent/permission issue this project has documented
+(the connector "Manage your connections" popup storm in Milestone 3, the Dataverse
 knowledge-source detail panel hanging the browser in Milestone 5, now this) — a real pattern
 worth naming as a finding in its own right: this platform's interactive consent surfaces are
-currently the least reliable part of the authoring experience, consistently across different
-specific features. The underlying integrations themselves (connector wiring, RBAC, delegated
-auth design) have been correct every time; what fails is the UI asking a human to click
-"Allow."
+currently the least reliable part of the authoring experience. But this one goes a layer
+deeper than "the card doesn't render" — the card rendering and being clicked still didn't
+result in a persisted consent grant, pointing at an OAuth completion issue for this specific
+connection rather than purely a UI rendering bug. The underlying integration itself (connector
+wiring, RBAC, delegated auth design, the agent's own correct behavior throughout — identifying
+the need, refusing to fake success, reporting clean failures) has been correct every time;
+what fails is Microsoft's own consent infrastructure completing the grant.
 
-Not pursuing further UI surfaces to test this on — three independent attempts is enough
-evidence of a platform-side gap, not a configuration problem on this project's end.
+Investigated from every practical angle available (three rendering surfaces, two auth modes, a
+parameter-level alternate theory, and finally a working card click) — stopping here. This is
+thoroughly-evidenced platform unreliability, not a configuration gap worth further chasing.
 
 ### Next steps
 
