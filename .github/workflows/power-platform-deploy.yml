@@ -57,3 +57,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           solution-file: ${{ runner.temp }}\business-data-managed.zip
           publish-changes: true
+          # The Admin Console app module (crba7_PlatformAdminConsole) has a component that
+          # depends on the app module itself. Dataverse's dependency checker evaluates
+          # against what's already active in the target -- not what's arriving in the same
+          # package -- so a cold-start import into a brand-new environment false-positives
+          # on this self-referential dependency. Documented Microsoft workaround.
+          skip-dependency-check: true
