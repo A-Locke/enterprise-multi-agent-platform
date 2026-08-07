@@ -69,6 +69,7 @@ See [`manual-setup.md`](manual-setup.md) for the handful of steps that cannot be
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records — the reasoning behind every non-trivial choice |
 | [`docs/diagrams/`](docs/diagrams/) | Sequence diagrams for major request flows (auth, agent chat) |
 | [`docs/deliverables/`](docs/deliverables/) | Consulting-facing artifacts: executive overview, solution proposal, assumptions/constraints, risk register, cost estimate, roadmap, technical + operations handover |
+| [`docs/demo-script.md`](docs/demo-script.md) | Beat-by-beat script for recording a walkthrough demo |
 | [`manual-setup.md`](manual-setup.md) | The handful of steps that can't be automated, and why |
 | [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) | Milestone-by-milestone decisions, blockers, resolutions, lessons learned |
 | [`CHANGELOG.md`](CHANGELOG.md) | Notable changes per milestone |
