@@ -1,23 +1,34 @@
 # Security Model
 
-Living document — grows with each milestone. Current state reflects Milestone 2
-(Core Orchestration); items marked *planned* land in later milestones.
+Living document — grows with each milestone. Current state reflects Milestone 10
+(Hardening & Docs finalization).
 
 ## Identity
 
 Single Microsoft Entra ID tenant hosts both Azure resources and Power Platform/Dataverse
 (ADR-0004) — no cross-tenant identity federation needed for this project's scope.
 
-Two categories of principal exist today:
+Three categories of principal exist today:
 - **Human users**, authenticating interactively (device-code flow today; authorization-code
   + PKCE for any future browser client).
-- **Workload identities**: the API's Container App uses a **system-assigned managed
-  identity** for both of its Azure dependencies — `AcrPull` on the Container Registry (image
-  pulls) and `Cognitive Services OpenAI User` on the Azure OpenAI resource (chat completions).
-  Locally, the same code path authenticates via the developer's own `az login` session
-  (`DefaultAzureCredential`'s fallback chain) — no separate cloud/local auth branches to
-  maintain, and no API keys anywhere: the OpenAI resource has `disableLocalAuth: true`, so
-  key-based auth isn't even a configuration option that exists to misuse.
+- **Workload identities (Azure)**: the API's Container App uses a **system-assigned managed
+  identity** for its Azure dependencies — `AcrPull` on the Container Registry (image pulls),
+  `Cognitive Services OpenAI User` on the Azure OpenAI resource (chat completions), and
+  `Cognitive Services User` on the Content Safety resource (moderation checks, Milestone 10 —
+  see [ADR-0014](adr/0014-content-safety.md)). Locally, the same code path authenticates via
+  the developer's own `az login` session (`DefaultAzureCredential`'s fallback chain) — no
+  separate cloud/local auth branches to maintain, and no API keys anywhere: every Cognitive
+  Services resource in this project has `disableLocalAuth: true`, so key-based auth isn't
+  even a configuration option that exists to misuse.
+- **Workload identities (CI/CD pipelines)**: two dedicated identities, one per release
+  pipeline (Milestone 9 — see [ADR-0013](adr/0013-combined-release-process.md)):
+  - A User-Assigned Managed Identity with GitHub OIDC federated credentials
+    (`msi-<project>`, its own resource group), holding `Contributor` and `Role Based Access
+    Control Administrator` scoped to `rg-dev` only — no stored Azure secret.
+  - A dedicated Entra app registration, registered as a Dataverse **Application User**
+    (System Administrator) in both Power Platform environments, authenticating via
+    client-credentials — the one standing secret this project's CI holds, stored in Key
+    Vault and as a GitHub secret, never in source.
 
 Almost no client secrets exist anywhere in this project's Entra app registrations — the API's
 registration (`infra/entra/`) is a public client for its own device-code / PKCE flows, and
@@ -44,12 +55,14 @@ These are enforced in the API (`apps/api/app/auth.py`) via the token's `roles` c
 custom claims or a separate authorization service — see
 [`docs/diagrams/auth-sequence.md`](diagrams/auth-sequence.md) for the full request flow.
 
-**Dataverse mirroring:** the same three role names are planned as Dataverse security roles,
-created in Milestone 7 alongside the actual business-data tables they'd govern. Creating
-them now would mean empty, privilege-less role objects with nothing meaningful to attach —
-security roles in Dataverse are fundamentally table-privilege sets, and no custom tables
-exist yet. Deferring avoids doing the same work twice; the naming convention (`Admin`,
-`Agent.User`, `Auditor`) is fixed now specifically so the eventual mapping is unambiguous.
+**Dataverse mirroring:** the same three role names exist as real Dataverse security roles
+(`Admin`, `Agent.User`, `Auditor`), created in Milestone 7 alongside the Agent Configuration
+and Conversation Audit Log tables they govern — see [ADR-0012](adr/0012-dataverse-business-data.md).
+Row-level security is enforced by Dataverse natively (e.g. `Agent.User` sees only their own
+audit entries, not everyone's), not by application logic. These roles are provisioned in
+both Power Platform environments now that a real dev→test promotion pipeline exists
+(Milestone 9), captured as a source-controlled solution
+(`power-platform/solutions/business-data`) rather than authored twice by hand.
 
 ## Token validation
 
@@ -64,13 +77,20 @@ tests (`apps/api/tests/test_auth.py`) cover: missing token (401), wrong audience
 expired token (401), valid token without the required role (403), and valid token with the
 required role (200) — not just the happy path.
 
-## Agent orchestration (Milestone 2)
+## Agent orchestration (Milestone 2, hardened in Milestone 10)
 
 The `/agent/chat` endpoint (Semantic Kernel, `apps/api/app/agent.py`) requires `Admin` or
 `Agent.User` — see [`docs/diagrams/agent-chat-sequence.md`](diagrams/agent-chat-sequence.md)
 for the full request path from client through APIM to Azure OpenAI. Same token-validation
-and RBAC enforcement as every other route; the only new element is the API's own outbound
-call to Azure OpenAI, which is itself managed-identity-authenticated (see Identity, above).
+and RBAC enforcement as every other route; the API's own outbound calls (Azure OpenAI,
+Content Safety) are both managed-identity-authenticated (see Identity, above).
+
+As of Milestone 10, every request to `/agent/chat` is checked against **Azure AI Content
+Safety** (`apps/api/app/content_safety.py`) before the message reaches the model — see
+[ADR-0014](adr/0014-content-safety.md) for the threshold and fail-open rationale. This is in
+addition to, not instead of, Azure OpenAI's own default content filter at the model layer.
+Copilot Studio conversations (this platform's primary conversational surface) are not routed
+through this check — see Known limitations, below.
 
 ## Secrets and configuration
 
@@ -80,8 +100,11 @@ call to Azure OpenAI, which is itself managed-identity-authenticated (see Identi
 - **Azure**: Key Vault (RBAC-authorized, purge protection on) holds any secret material that
   can't be avoided entirely via managed identity. No secrets are hardcoded into Bicep — every
   environment-specific value is a parameter sourced from `.env`/`azd env`.
-- **CI/CD** *(planned)*: GitHub↔Azure authentication via OIDC federated credentials
-  (`azd pipeline config`), not long-lived stored secrets — see `manual-setup.md` #7.
+- **CI/CD**: GitHub↔Azure authentication via OIDC federated credentials (no stored Azure
+  secret) and a dedicated Dataverse Application User for the Power Platform pipeline (one
+  standing secret, Key Vault + GitHub secret) — see [ADR-0013](adr/0013-combined-release-process.md)
+  and `manual-setup.md` #7. Both `azure-dev.yml` and `power-platform-deploy.yml` are
+  `workflow_dispatch`-only (deliberate, reviewed deployments), not auto-deploy-on-push.
 
 ## Network and transport
 
@@ -100,30 +123,47 @@ call to Azure OpenAI, which is itself managed-identity-authenticated (see Identi
 - Key Vault: soft-delete + purge protection on (see `PROJECT_JOURNAL.md` Milestone 0 for why
   purge protection specifically is now an Azure platform default, not optional).
 - Dataverse: encryption at rest is a Microsoft-managed platform default for all environments.
-- Azure AI Content Safety *(evaluate, per ADR-0001)* — not yet implemented; revisit once the
-  LLM-facing endpoints exist (Milestone 2+).
+- **Azure AI Content Safety** — implemented Milestone 10, see [ADR-0014](adr/0014-content-safety.md).
+  Input moderation on the pro-code `/agent/chat` endpoint; Copilot Studio's own moderation is
+  a separate, Microsoft-managed platform feature outside this project's code.
 
-## Auditing *(planned)*
+## Auditing
 
-- Dataverse has built-in auditing (entity/record-level change tracking) — evaluate enabling
-  it directly rather than building custom audit logging, per the Microsoft Platform
-  Evaluation principle (ADR-0001).
-- Azure-side audit trail: Application Insights request/dependency logging (already live from
-  Milestone 0) plus Azure Activity Log for control-plane changes (RBAC, resource changes) —
-  no additional work needed, just needs to be surfaced in the eventual admin console
-  (Milestone 7).
+- **Dataverse Conversation Audit Log** (Milestone 7 table, wired to real agent conversations
+  in Milestone 8): a real Dataverse table logging agent/user/outcome per conversation, with
+  row-level security (`Agent.User` sees only their own entries, `Auditor` sees everyone's) —
+  see [ADR-0012](adr/0012-dataverse-business-data.md) and `PROJECT_JOURNAL.md` Milestone 8
+  for the orphaned-column bug hit and fixed along the way.
+- Dataverse's own built-in auditing (entity/record-level change tracking) is a separate,
+  native platform capability, evaluated but not additionally enabled — the Conversation
+  Audit Log table above already covers this project's actual audit need without it.
+- Azure-side audit trail: Application Insights request/dependency logging plus Azure Activity
+  Log for control-plane changes (RBAC, resource changes). **Known gap** (Milestone 8): Azure
+  Monitor alerting is live (`infra/modules/monitoring.bicep`), but Application Insights has
+  been provisioned since Milestone 0 without ever being wired into the API's application code
+  — request/dependency tracing isn't actually flowing yet, despite the resource existing. See
+  `docs/observability.md`.
 
 ## Known limitations at this milestone
 
 - No Conditional Access / MFA policy configured on the Entra tenant (Entra ID Free tier
   covers this project's needs; Conditional Access requires P1, out of scope for a $0-minded
   portfolio build).
-- No Privileged Identity Management (PIM) — the demo users hold their App Role assignments
-  as standing access, not just-in-time. Acceptable for a two-person portfolio sandbox;
-  would be a real recommendation for a production engagement.
-- Dataverse security roles not yet created (see above — deferred to Milestone 7 by design).
+- No Privileged Identity Management (PIM) — human demo users and the CI/CD workload
+  identities alike hold standing access rather than just-in-time. Acceptable for a
+  single-person portfolio sandbox; a real production engagement would recommend PIM for the
+  workload identities specifically, given they hold real write access (RBAC Administrator,
+  Dataverse System Administrator — see Identity, above).
 - APIM runs a single passthrough policy; no per-route rate limiting, IP filtering, or
   transformation yet — authorization is enforced entirely at the API layer for now.
-- Azure OpenAI content moderation relies on the platform default (`raiPolicyName:
-  Microsoft.Default`) — Azure AI Content Safety as a dedicated evaluated layer is still
-  planned, not implemented.
+- Content Safety covers the pro-code `/agent/chat` endpoint's input only, not output, and not
+  Copilot Studio conversations at all (a separate, Microsoft-managed moderation layer outside
+  this project's code) — see [ADR-0014](adr/0014-content-safety.md).
+- Public network access is `Enabled` on Key Vault/ACR/Azure OpenAI/Content Safety/AI Search
+  for development simplicity — a documented trade-off (see Network and transport, below), not
+  an oversight; Private Link is the real recommendation for a production posture.
+- The two CI/CD workload identities (Milestone 9) hold real write access scoped as narrowly
+  as practical (`rg-dev` only for the Azure MSI; both Dataverse environments only for the
+  Power Platform service principal) but are still standing credentials with genuine blast
+  radius if compromised — both are explicitly in scope for the project teardown plan when
+  this project concludes.

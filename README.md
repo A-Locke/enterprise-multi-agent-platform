@@ -13,8 +13,10 @@ For every architectural capability, the Microsoft-native platform service (Power
 ```
 /infra                       Bicep modules + azd main.bicep/main.parameters.json (Azure pro-code side)
 /apps/api                    FastAPI + Semantic Kernel orchestration backend (behind APIM)
-/apps/functions              Azure Functions (ingestion, connector backends)
-/apps/web                    Next.js — only where Power Apps evaluation rules it out (documented)
+/apps/functions              Azure Functions -- scaffolded, ultimately unused: RAG ingestion and enterprise
+                              integration both landed on native Power Platform capability instead (ADR-0010, ADR-0011)
+/apps/web                    Next.js -- scaffolded, ultimately unused: Power Apps and Copilot Studio covered
+                              every user-facing surface this project needed
 /power-platform/solutions    Dataverse tables, Power Apps app(s), Power Automate flows, exported Copilot Studio agent
 /power-platform/pipelines    Power Platform Build Tools pipeline defs, environment variables, connection references
 /docs                        architecture, ADRs, diagrams, guides, consulting deliverables
@@ -27,7 +29,16 @@ PROJECT_JOURNAL.md           Milestone-by-milestone decisions, blockers, resolut
 
 ## Status
 
-Milestones 0–2 complete. Live: Azure infrastructure (Key Vault, Container Registry, Log Analytics/App Insights, Cost Management budget), Power Platform Dataverse environment, an Entra ID-secured API (`apps/api`) with role-based authorization, and — behind APIM — a working Semantic Kernel agent calling Azure OpenAI via managed identity, verified end-to-end against a real token and a real model response. Starting Milestone 3 (Copilot Studio Agent) next. See [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) for full milestone history and [`docs/adr/`](docs/adr/) for architecture decisions.
+Milestones 0–10 complete. A working enterprise multi-agent platform across both halves of
+the Microsoft stack: **Copilot Studio** hosts the primary conversational surface (Connected
+Agents pattern, native Teams/Outlook/SharePoint/Planner tools, RAG via Dataverse-indexed
+knowledge); **Power Platform** carries the business data layer (Dataverse tables, security
+roles, a model-driven admin app) and its own Build Tools promotion pipeline (dev → test);
+**Azure** carries the pro-code side (Semantic Kernel behind APIM, Azure OpenAI, AI Search,
+Content Safety, Container Apps) with its own GitHub↔Azure OIDC deploy pipeline. Every
+non-trivial decision is an ADR (`docs/adr/`); every real bug and its root cause is in
+`PROJECT_JOURNAL.md`. See [`docs/deliverables/`](docs/deliverables/) for the consulting-facing
+summary (executive overview, cost estimate, roadmap, handover guides).
 
 ## Local prerequisites
 
@@ -52,9 +63,12 @@ See [`manual-setup.md`](manual-setup.md) for the handful of steps that cannot be
 | Doc | Covers |
 |---|---|
 | [`docs/security-model.md`](docs/security-model.md) | Identity, RBAC, token validation, secrets handling, known limitations — living doc, updated every milestone |
-| [`docs/cost-analysis.md`](docs/cost-analysis.md) | Per-resource cost breakdown, free-tier/credit strategy, budget guardrails |
+| [`docs/cost-analysis.md`](docs/cost-analysis.md) | Per-resource cost breakdown, free-tier/credit strategy, budget guardrails, actual spend |
+| [`docs/observability.md`](docs/observability.md) | Azure Monitor alerts + Power Platform native analytics |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Symptom-indexed index of every real issue this project hit, linking back to the ADR/journal entry |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records — the reasoning behind every non-trivial choice |
 | [`docs/diagrams/`](docs/diagrams/) | Sequence diagrams for major request flows (auth, agent chat) |
+| [`docs/deliverables/`](docs/deliverables/) | Consulting-facing artifacts: executive overview, solution proposal, assumptions/constraints, risk register, cost estimate, roadmap, technical + operations handover |
 | [`manual-setup.md`](manual-setup.md) | The handful of steps that can't be automated, and why |
 | [`PROJECT_JOURNAL.md`](PROJECT_JOURNAL.md) | Milestone-by-milestone decisions, blockers, resolutions, lessons learned |
 | [`CHANGELOG.md`](CHANGELOG.md) | Notable changes per milestone |
