@@ -25,9 +25,11 @@ your agent → **Test** (the Preview pane).
 
 ## 2. The pro-code API, directly
 
-`scripts/demo-auth.ps1` does a device-code sign-in and then calls `/me`, `/admin/ping`, and
-`/agent/chat` itself — **dot-source** it (leading `. `) so the token it acquires stays
-available in your session afterward, pointed at the deployed API rather than localhost:
+`scripts/demo-auth.ps1` opens your browser for a normal interactive sign-in (authorization
+code + PKCE — device-code flow is blocked outright by this tenant's Security Defaults policy,
+see `docs/security-model.md`), then calls `/me`, `/admin/ping`, and `/agent/chat` itself —
+**dot-source** it (leading `. `) so the token it acquires stays available in your session
+afterward, pointed at the deployed API rather than localhost:
 
 ```powershell
 . .\scripts\load-env.ps1
@@ -35,7 +37,8 @@ $fqdn = az containerapp show -g rg-dev -n ca-api-kgeonlpliztq6 --query "properti
 . .\scripts\demo-auth.ps1 -ApiBaseUrl "https://$fqdn"
 ```
 
-You'll get a device-code URL to sign in with, then see all three calls succeed, ending with a
+Your browser opens to a normal Microsoft sign-in page; after signing in it redirects to a
+local listener the script is waiting on. You'll see all three calls succeed, ending with a
 real `/agent/chat` reply. Then, with `$token` still set from that run, send one more request
 with a deliberately borderline/harsh message to confirm Content Safety
 ([ADR-0014](adr/0014-content-safety.md)) is actually intercepting it, not just deployed:

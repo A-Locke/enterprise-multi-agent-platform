@@ -9,8 +9,15 @@ Single Microsoft Entra ID tenant hosts both Azure resources and Power Platform/D
 (ADR-0004) — no cross-tenant identity federation needed for this project's scope.
 
 Three categories of principal exist today:
-- **Human users**, authenticating interactively (device-code flow today; authorization-code
-  + PKCE for any future browser client).
+- **Human users**, authenticating interactively via the OAuth2 authorization-code + PKCE flow
+  (`scripts/demo-auth.ps1`, a local `HttpListener` catching the browser redirect — no MSAL SDK
+  dependency). Originally implemented as device-code flow; switched after discovering this
+  tenant's **Security Defaults** policy blocks device-code outright
+  (`AADSTS530035: BlockedBySecurityDefaults` — device code is a common phishing vector, so
+  Security Defaults treats it as unsafe regardless of app role assignment or consent, for
+  every account, with no per-user exception available short of a full Conditional Access P1
+  license). Auth-code + PKCE is both the fix and the more correct choice for a real public
+  client — see `PROJECT_JOURNAL.md` for the full diagnosis.
 - **Workload identities (Azure)**: the API's Container App uses a **system-assigned managed
   identity** for its Azure dependencies — `AcrPull` on the Container Registry (image pulls),
   `Cognitive Services OpenAI User` on the Azure OpenAI resource (chat completions), and
@@ -146,9 +153,12 @@ through this check — see Known limitations, below.
 
 ## Known limitations at this milestone
 
-- No Conditional Access / MFA policy configured on the Entra tenant (Entra ID Free tier
-  covers this project's needs; Conditional Access requires P1, out of scope for a $0-minded
-  portfolio build).
+- No *custom* Conditional Access / MFA policy configured (Conditional Access requires P1,
+  out of scope for a $0-minded portfolio build) — but the tenant's free-tier **Security
+  Defaults** baseline is active and does enforce real restrictions (see Identity, above: it
+  blocks the device-code OAuth flow entirely). Worth stating precisely, since "no Conditional
+  Access" undersold what's actually enforced here — Security Defaults is blunt (all-or-nothing,
+  no per-user exceptions) but not nothing.
 - No Privileged Identity Management (PIM) — human demo users and the CI/CD workload
   identities alike hold standing access rather than just-in-time. Acceptable for a
   single-person portfolio sandbox; a real production engagement would recommend PIM for the

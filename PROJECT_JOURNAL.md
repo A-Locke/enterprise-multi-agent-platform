@@ -953,6 +953,38 @@ assumed. Power Platform licensing similarly stayed at $0 — both Dataverse envi
 Developer Plan (free, non-production), and Copilot Studio never moved past its free trial for
 build/test use.
 
+### Post-milestone verification: Security Defaults blocks device-code flow
+
+While manually walking through `docs/walkthrough-guide.md` to verify claims before writing a
+project summary, `scripts/demo-auth.ps1`'s device-code sign-in failed for every account
+tried — including the Power Platform admin account that genuinely does hold the `Admin` App
+Role on the API's app registration. The browser showed a generic "Your sign-in was successful
+but you don't have permission to access this resource" with no error code visible by default;
+expanding "More details" surfaced **`AADSTS530035: BlockedBySecurityDefaults`**.
+
+Ruled out the obvious causes directly rather than guessing: `appRoleAssignmentRequired` on
+the app's service principal is `false` (assignment isn't even enforced), both required scopes
+(`User.Read`, `access_as_user`) were already consented tenant-wide (`AllPrincipals`), and the
+account itself is a normal enabled Member-type user with licenses, not a guest. None of that
+mattered — Security Defaults (the tenant's free-tier baseline policy, active since tenant
+creation) blocks the device-code OAuth flow specifically, for every account, because it's a
+well-known phishing vector — and unlike full Conditional Access (P1), Security Defaults has
+no per-user exception mechanism, so there was no config-only fix available.
+
+Rather than disable a real security control just to unblock a demo script — the wrong
+trade-off for a project whose whole framing is security-conscious — rewrote
+`scripts/demo-auth.ps1` to use the **authorization-code + PKCE flow** instead: a local
+`System.Net.HttpListener` on `http://localhost:8400/callback/` catches the browser redirect,
+no MSAL SDK dependency, no client secret (the app registration is already a public client).
+Registered the new redirect URI on the app (`publicClient.redirectUris`, distinct from the
+`web.redirectUris` already registered for the Power Platform connector's own OAuth flow).
+Verified end-to-end on the first real attempt after the rewrite: signed in, `/me` and
+`/admin/ping` both returned correctly role-gated responses, and `/agent/chat` returned a real
+Semantic Kernel/Azure OpenAI reply — all through the live deployed Container App, not
+localhost. `docs/security-model.md` updated to state precisely what Security Defaults
+enforces here, rather than the previous, slightly-too-generous "no Conditional Access policy"
+framing.
+
 ### Next steps
 
 This closes the planned milestone sequence (0–10). Remaining open items are tracked in

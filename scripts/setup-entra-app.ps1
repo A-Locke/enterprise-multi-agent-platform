@@ -40,10 +40,25 @@ if ($existingAppId) {
     az ad app update --id $appId --set api="@$repoRoot\infra\entra\api-scope.json" | Out-Null
 }
 
-# Allows the MSAL device-code flow (scripts/demo-auth.ps1) to work without a client
-# secret -- device code is a "public client" flow.
-Write-Host "Enabling public client flows (needed for MSAL device-code demo)..." -ForegroundColor Cyan
+# Allows scripts/demo-auth.ps1's auth-code + PKCE flow to work without a client secret --
+# both device-code and auth-code+PKCE are "public client" flows. (Originally device-code;
+# switched after this tenant's Security Defaults policy turned out to block it outright --
+# AADSTS530035, see PROJECT_JOURNAL.md and docs/security-model.md.)
+Write-Host "Enabling public client flows..." -ForegroundColor Cyan
 az ad app update --id $appId --set isFallbackPublicClient=true | Out-Null
+
+# The local HttpListener redirect used by demo-auth.ps1's PKCE flow -- registered under
+# publicClient.redirectUris, distinct from the web.redirectUris block below (which is for
+# the Power Platform connector's own OAuth flow, a different platform type entirely).
+Write-Host "Ensuring the local demo-auth.ps1 redirect URI is registered..." -ForegroundColor Cyan
+$demoRedirectUri = "http://localhost:8400/callback/"
+$existingPublicClientUris = az ad app show --id $appId --query "publicClient.redirectUris" -o json | ConvertFrom-Json
+if ($existingPublicClientUris -contains $demoRedirectUri) {
+    Write-Host "Already present - skipping." -ForegroundColor Yellow
+} else {
+    az ad app update --id $appId --public-client-redirect-uris $demoRedirectUri | Out-Null
+    Write-Host "Registered." -ForegroundColor Green
+}
 
 Write-Host "Ensuring service principal exists..." -ForegroundColor Cyan
 $spId = az ad sp list --filter "appId eq '$appId'" --query "[0].id" -o tsv
