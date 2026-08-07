@@ -48,6 +48,8 @@ jobs:
           # internal "current principal id" lookup requests /subscriptions/ with an empty
           # subscription segment and gets a 404 MissingSubscription.
           azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt
+          echo "--- azd env get-values (temporary debug) ---"
+          azd env get-values | sed 's/=.*/=<redacted>/'
           # azd normally resolves the current-principal-id by looking up the interactively
           # signed-in user via Microsoft Graph -- there is no such user under
           # federated/managed-identity CI auth, so it must be set explicitly per-environment
