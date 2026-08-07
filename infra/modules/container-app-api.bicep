@@ -28,6 +28,9 @@ param openAiEndpoint string
 @description('Azure OpenAI chat model deployment name.')
 param openAiDeploymentName string
 
+@description('Azure AI Content Safety endpoint (AAD-authenticated, no key).')
+param contentSafetyEndpoint string
+
 @description('Placeholder image used on first deploy, before azd deploy pushes the real one.')
 param containerImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
@@ -75,6 +78,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             { name: 'AZURE_API_APP_CLIENT_ID', value: apiClientId }
             { name: 'AZURE_OPENAI_ENDPOINT', value: openAiEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT_NAME', value: openAiDeploymentName }
+            { name: 'AZURE_CONTENT_SAFETY_ENDPOINT', value: contentSafetyEndpoint }
           ]
         }
       ]

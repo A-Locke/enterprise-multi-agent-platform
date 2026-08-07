@@ -43,6 +43,17 @@ def stub_agent_chat(monkeypatch):
     monkeypatch.setattr(agent_router, "agent_chat", fake_chat)
 
 
+@pytest.fixture(autouse=True)
+def stub_check_text(monkeypatch):
+    """Never call real Azure AI Content Safety in unit tests -- content_safety.py's own
+    block-threshold logic is covered separately in test_content_safety.py."""
+
+    async def fake_check_text(text: str) -> None:
+        return None
+
+    monkeypatch.setattr(agent_router, "check_text", fake_check_text)
+
+
 def make_token(rsa_keys, roles: list[str] | None = None) -> str:
     private_key, _ = rsa_keys
     now = int(time.time())

@@ -18,3 +18,7 @@ testpaths = ["tests"]
 # Without this, `pytest` (the console script) doesn't add the CWD to sys.path the
 # way `python -m pytest` does -- breaks `from app import ...` in CI specifically.
 pythonpath = ["."]
+# test_content_safety.py uses bare `async def test_*` (no TestClient involved, unlike the
+# other test files) -- auto mode runs them without needing a per-test marker.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

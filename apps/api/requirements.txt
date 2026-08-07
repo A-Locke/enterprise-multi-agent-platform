@@ -5,3 +5,4 @@ PyJWT[crypto]==2.9.0
 requests==2.32.3
 semantic-kernel==1.21.1
 azure-identity==1.19.0
+azure-ai-contentsafety==1.0.0

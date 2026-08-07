@@ -105,6 +105,16 @@ module ai './modules/ai.bicep' = {
   }
 }
 
+module contentSafety './modules/content-safety.bicep' = {
+  name: 'content-safety'
+  scope: rg
+  params: {
+    location: location
+    tags: tags
+    resourceToken: resourceToken
+  }
+}
+
 module containerAppsEnv './modules/container-apps-env.bicep' = {
   name: 'container-apps-env'
   scope: rg
@@ -130,6 +140,7 @@ module containerAppApi './modules/container-app-api.bicep' = {
     apiClientId: apiClientId
     openAiEndpoint: ai.outputs.endpoint
     openAiDeploymentName: ai.outputs.deploymentName
+    contentSafetyEndpoint: contentSafety.outputs.endpoint
   }
 }
 
@@ -144,6 +155,19 @@ module containerAppOpenAiRbac './modules/ai-rbac.bicep' = {
     openAiName: ai.outputs.name
     principalId: containerAppApi.outputs.principalId
     roleDefinitionId: ai.outputs.cognitiveServicesOpenAiUserRoleId
+  }
+}
+
+// Container App -> Content Safety RBAC, reusing ai-rbac.bicep (its `existing` lookup is a
+// plain Microsoft.CognitiveServices/accounts reference, kind-agnostic despite the param
+// name) for the same circular-dependency reason as containerAppOpenAiRbac above.
+module containerAppContentSafetyRbac './modules/ai-rbac.bicep' = {
+  name: 'container-app-content-safety-rbac'
+  scope: rg
+  params: {
+    openAiName: contentSafety.outputs.name
+    principalId: containerAppApi.outputs.principalId
+    roleDefinitionId: contentSafety.outputs.cognitiveServicesUserRoleId
   }
 }
 
@@ -220,3 +244,5 @@ output AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME string = ai.outputs.embeddingDeplo
 output KNOWLEDGE_STORAGE_NAME string = knowledgeStorage.outputs.name
 output KNOWLEDGE_STORAGE_CONTAINER_NAME string = knowledgeStorage.outputs.containerName
 output AI_SEARCH_NAME string = aiSearch.outputs.name
+output CONTENT_SAFETY_NAME string = contentSafety.outputs.name
+output CONTENT_SAFETY_ENDPOINT string = contentSafety.outputs.endpoint
