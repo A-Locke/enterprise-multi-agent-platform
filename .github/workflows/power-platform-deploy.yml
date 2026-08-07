@@ -55,5 +55,5 @@ jobs:
           app-id: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_ID }}
           client-secret: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          path: ${{ runner.temp }}\business-data-managed.zip
+          solution-file: ${{ runner.temp }}\business-data-managed.zip
           publish-changes: true
