@@ -49,7 +49,7 @@ jobs:
           # auth, so it must be set explicitly per-environment or `azd provision` fails at
           # "fetching current principal id" (see .env.example for where this value comes from).
           azd env set AZURE_PRINCIPAL_ID "$AZURE_PRINCIPAL_ID"
-          azd provision --no-prompt
+          azd provision --no-prompt --debug
         shell: bash
 
       - name: Deploy Application
