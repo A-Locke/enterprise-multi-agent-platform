@@ -2,7 +2,6 @@
 <EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <EntityRelationship Name="business_unit_crba7_agentconfiguration" />
   <EntityRelationship Name="business_unit_crba7_conversationauditlog" />
-  <EntityRelationship Name="crba7_conversationauditlog_User_crba7_conversationauditlog" />
   <EntityRelationship Name="crba7_conversationauditlog_UserLookup_systemuser" />
   <EntityRelationship Name="lk_crba7_agentconfiguration_createdby" />
   <EntityRelationship Name="lk_crba7_agentconfiguration_modifiedby" />
