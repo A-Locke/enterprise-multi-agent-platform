@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file. Format loosely 
 - `infra/modules/content-safety.bicep`, `apps/api/app/content_safety.py`: Azure AI Content Safety, F0 tier, managed-identity auth, input moderation on `/agent/chat` (severity ≥ 2 blocks, fails open on service errors). ADR-0014. Deployed and verified live via the Milestone 9 OIDC pipeline.
 - `apps/api/tests/test_content_safety.py`: unit coverage for the block/allow/fail-open paths. Required adding `pytest-asyncio` (`asyncio_mode = "auto"`) — this project's test suite had never needed direct async tests before.
 - `docs/deliverables/`: eight consulting-facing deliverables (executive overview, solution proposal, assumptions and constraints, risk register, cost estimate, roadmap, technical handover, operations handover).
-- `docs/demo-script.md`: beat-by-beat demo recording script.
+- `docs/walkthrough-guide.md`: step-by-step guide to exploring the live platform manually (Copilot Studio, the API + Content Safety, Dataverse, CI/CD) — no screen recording required.
 
 ### Changed
 - `docs/security-model.md`: full refresh — Dataverse security roles and the CI/CD OIDC pipeline updated from "planned" to their real, implemented state; new Identity and Known limitations entries for both CI/CD workload identities.

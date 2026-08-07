@@ -938,8 +938,10 @@ roadmap, and technical + operations handover guides. Each one derived from real 
 content rather than written speculatively — the risk register in particular traces every row
 back to a specific documented limitation or incident rather than a generic checklist.
 
-Wrote `docs/demo-script.md` — a beat-by-beat recording script — since an actual demo
-recording is a human action this session can't perform directly.
+Wrote `docs/walkthrough-guide.md` — a step-by-step manual walkthrough covering the same
+ground a recorded demo would (Copilot Studio, the API + Content Safety, Dataverse, CI/CD) —
+rewritten from an initial recording-script draft after deciding not to record screen video;
+guides hands-on exploration instead, with expected results at each stop.
 
 ### Cost check
 
