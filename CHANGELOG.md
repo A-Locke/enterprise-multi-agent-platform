@@ -55,9 +55,10 @@ All notable changes to this project are documented in this file. Format loosely 
 - AI Search indexer succeeded: 154/154 documents, 165 chunks indexed, confirmed live via the Search REST API and portal document count.
 
 ### Known limitations
-- Copilot Studio can't consume the index: "Add knowledge → Azure AI Search" doesn't exist for agents on the GitHub Copilot harness (Standard-harness-only, no migration path between harnesses for an existing agent). Not pursued given the cost of rebuilding Milestones 3-4's Copilot Studio work for one feature.
-- Fallback direct file-upload knowledge source (a separate Dataverse-native pipeline, gated behind a Preview-labeled "Dataverse intelligence" environment setting found only after an initial `DataverseUnstructuredSearch failed: 400`) never completed indexing after several hours — confirmed stuck, not just slow. The maker Preview's per-file status panel also reliably hung the browser in both Firefox and Edge while checking on it.
-- Net: real, verified RAG infrastructure at the Azure level; no working Copilot Studio consumption path found. Documented as two independent platform limitations rather than retried indefinitely.
+- Copilot Studio can't consume the AI Search index directly: "Add knowledge → Azure AI Search" doesn't exist for agents on the GitHub Copilot harness (Standard-harness-only, no migration path between harnesses for an existing agent). Not pursued given the cost of rebuilding Milestones 3-4's Copilot Studio work for one feature — this integration path remains permanently blocked, though the AI Search infrastructure itself is real and independently verified.
+
+### Corrected (see PROJECT_JOURNAL.md, Milestone 5)
+- The fallback direct file-upload knowledge source (a separate Dataverse-native pipeline, gated behind a Preview-labeled "Dataverse intelligence" environment setting) was originally documented as stuck after indexing sat "In progress" for several hours. It wasn't — it completed and reached "Ready" after several more hours, and a real test query returned an accurate answer pulled from the actual document content. The feature works; it's just far slower than Microsoft's documented "several minutes" for a 16-file batch. **The Knowledge Agent's actual capability — this milestone's real goal — is achieved via this path.** The maker Preview's per-file status panel hanging the browser (both Firefox and Edge) remains a real, separate client-side issue.
 
 ## [Milestone 4] — 2026-08-05 — Multi-Agent Coordination
 

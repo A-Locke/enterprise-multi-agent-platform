@@ -473,7 +473,7 @@ Milestone 3 fix is airtight — not worth chasing further given it self-heals gr
 
 ## Milestone 5 — Knowledge Retrieval (RAG)
 
-**Status:** infrastructure complete and verified; Copilot Studio consumption not achieved
+**Status:** complete — infrastructure verified, and the Knowledge Agent's actual capability achieved via the fallback path (see correction below)
 **Date started:** 2026-08-05
 **Date completed (infrastructure):** 2026-08-06
 
@@ -519,34 +519,40 @@ deployment. Real friction along the way, all resolved:
 Once all of that was in place: indexer ran successfully, **154/154 documents, 165 chunks**,
 verified live via the Search REST API and the portal's document count.
 
-### Not achieved: Copilot Studio couldn't consume the index
+### One path blocked permanently, one path that just needed patience
 
-Two independent attempts, both real platform walls rather than configuration mistakes:
+Two independent attempts to get Copilot Studio consuming real knowledge content:
 
 1. **Native "Add knowledge → Azure AI Search"** doesn't exist as an option for agents on the
    **GitHub Copilot harness** (what every agent in this project runs on) — it's Standard-
    harness-only, confirmed via Microsoft's harness documentation, with no migration path
    between harnesses for an existing agent. Rebuilding Milestones 3 and 4's Copilot Studio
-   work from scratch for one knowledge-source type wasn't judged worth it.
+   work from scratch for one knowledge-source type wasn't judged worth it. This path remains
+   genuinely blocked — the AI Search infrastructure built in this milestone is real and
+   independently verified (165 chunks, queryable via REST), but it isn't what the live
+   Knowledge Agent actually uses.
 2. **Fallback: direct file upload** (a different, Dataverse-native pipeline, "Dataverse
    intelligence for agents and AI experiences" — a Preview-labeled environment setting, off by
    default, found only after the first attempt failed with `DataverseUnstructuredSearch
-   failed: 400`) got further — files attached, filenames recognized by the agent — but
-   indexing never left "In progress" after several hours, well past Microsoft's own stated
-   "may take several minutes." Confirmed genuinely stuck, not just slow. The maker Preview's
-   own per-file status detail panel also reliably hung the entire browser while checking on
-   this, independently reproduced in both Firefox and Edge.
+   failed: 400`) got files attached and recognized by name, but indexing sat in "In progress"
+   for several hours past Microsoft's stated "may take several minutes" — documented at the
+   time as genuinely stuck. **It wasn't.** Checked back after several more hours: all files
+   showed "Ready," and a real test question (about the ADR-0007 client-secret decision)
+   returned an accurate, detailed answer pulled straight from the actual document content. The
+   feature works; it's just dramatically slower than documented for a 16-file batch, not
+   broken. The maker Preview's per-file status panel still reliably hung the browser while
+   checking on progress (reproduced in both Firefox and Edge) — that specific client-side
+   issue is real and separate from the indexing outcome.
 
-**Net result**: real, verified RAG infrastructure at the Azure level; no working path to
-surface it through Copilot Studio found in this session. Documented as two independent
-platform limitations (one architectural/permanent, one preview-feature reliability that may
-improve) rather than retried indefinitely — consistent with how Teams sign-in (Milestone 3/4)
-and the Outlook consent UI (Milestone 6) were handled.
+**Net result**: real, verified RAG infrastructure at the Azure level, *and* a real, verified,
+working path for the Knowledge Agent's actual capability via the fallback — just not the one
+originally planned. The milestone's real goal (a Knowledge Agent that can answer questions
+grounded in real documents) is achieved.
 
 ### Next steps
 
-- Revisit if Microsoft ships harness interoperability, or if the Dataverse intelligence preview stabilizes.
-- The AI Search index remains live and queryable directly (REST API) as a demonstrable artifact even without Copilot Studio integration.
+- Revisit the native Azure AI Search path only if Microsoft ships harness interoperability — not otherwise, given the working fallback.
+- Plan for multi-hour indexing time on any future corpus additions to this knowledge source — a real operational characteristic, not a one-off fluke.
 
 ## Milestone 6 — Workflow Automation & Enterprise Integration
 

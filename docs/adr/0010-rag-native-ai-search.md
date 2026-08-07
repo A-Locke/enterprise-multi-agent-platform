@@ -2,11 +2,14 @@
 
 ## Status
 
-Partially accepted — see "What actually happened wiring this to Copilot Studio" below. The
-Azure-side infrastructure (steps 1-4) is built, deployed, and verified working exactly as
-planned. Step 5 (Copilot Studio's native knowledge connection) turned out not to be reachable
-from this project's agents at all, for reasons unrelated to anything this ADR got wrong about
-the Azure side.
+Accepted, with a path change — see "What actually happened wiring this to Copilot Studio"
+below. The Azure-side infrastructure (steps 1-4) is built, deployed, and verified working
+exactly as planned. Step 5 as originally planned (Copilot Studio's *native Azure AI Search*
+knowledge connection) isn't reachable from this project's agents at all (harness constraint,
+no workaround) — but the Knowledge Agent's actual goal is achieved via the fallback path
+(direct file upload, Dataverse-backed), confirmed working with a real, accurate retrieval
+after the underlying preview feature's indexing — slower than documented, not broken — caught
+up.
 
 ## Context
 
@@ -95,26 +98,28 @@ and 4's Copilot Studio work for one knowledge-source type. Not pursued.
 
 The fallback — uploading the same files directly as a Copilot Studio native "file upload"
 knowledge source, which doesn't depend on harness or on this project's own AI Search resource
-at all — got further (needed a separate environment setting, "Dataverse intelligence for
-agents and AI experiences," found only after the first attempt failed with
-`DataverseUnstructuredSearch failed: 400`) but ultimately also didn't complete: file indexing
-sat in "In progress" for several hours, well past Microsoft's own stated "may take several
-minutes" expectation, and never reached "Ready." This fallback is a *different*, Dataverse-native
-indexing pipeline entirely — unrelated to the AI Search resource used in steps 1-4 — so its
-failure is independent evidence that this specific capability ("Dataverse intelligence," labeled
-Preview in the tenant settings) isn't yet reliable, not something misconfigured on this project's
-side. The maker
-Preview's own status detail panel for a stuck file also reliably hung the entire browser,
-independently confirmed in both Firefox and Edge — a client-side robustness problem layered on
-top of the underlying indexing one.
+at all — needed a separate environment setting ("Dataverse intelligence for agents and AI
+experiences," found only after the first attempt failed with `DataverseUnstructuredSearch
+failed: 400`), then sat in "In progress" for several hours, well past Microsoft's own stated
+"may take several minutes" expectation. Initially documented as stuck/failed on that basis.
+**Correction**: it wasn't stuck — it eventually completed and moved to "Ready" after several
+more hours, and a real test query against it (asking about the ADR-0007 client-secret decision)
+returned an accurate, detailed answer pulled from the real document content, correctly citing
+the specific failure modes and design reasoning. The Dataverse intelligence preview is real and
+functional; it's just dramatically slower than Microsoft's own documentation suggests for a
+batch of 16 files — worth knowing as an operational characteristic, not a reason to avoid the
+feature. The maker Preview's own status detail panel for a stuck file did still reliably hang
+the entire browser while checking on progress, independently confirmed in both Firefox and
+Edge — that client-side robustness issue is real and separate from the indexing outcome itself.
 
 **Net result**: this project has a real, working, verified RAG pipeline at the Azure
-infrastructure level (165 indexed chunks, retrievable via the AI Search REST API directly), and
-two independently-failed attempts to surface that capability through Copilot Studio specifically
-— one blocked by a hard architectural constraint (harness), one blocked by an apparently-broken
-preview feature (Dataverse intelligence indexing). Both are documented platform limitations, not
-configuration mistakes caught and fixed elsewhere in this project's pattern. Revisit if Microsoft
-ships harness interop or the Dataverse intelligence preview stabilizes.
+infrastructure level (165 indexed chunks, retrievable via the AI Search REST API directly)
+*and* a working, verified path to surface equivalent capability through Copilot Studio via the
+native file-upload knowledge source — just not through the originally-planned Azure AI Search
+integration, which remains genuinely blocked by the harness constraint. One path blocked
+architecturally (harness, no workaround), one path that looked blocked but was actually just
+slow (Dataverse intelligence indexing, patience resolved it). The Knowledge Agent's actual
+capability — the milestone's real goal — is achieved.
 
 ## Consequences
 
@@ -129,10 +134,17 @@ ships harness interop or the Dataverse intelligence preview stabilizes.
   well under €0.30 total project spend at the time this was built.
 
 **Negative / accepted trade-offs:**
-- The Knowledge Agent's actual end-user capability wasn't achieved — real infrastructure, no
-  working Copilot Studio consumption of it. A harder trade-off than any prior ADR's "accepted
-  limitation" entries, since it means this milestone's user-facing goal isn't met, only its
-  infrastructure groundwork.
+- The originally-planned integration (Copilot Studio's native Azure AI Search knowledge
+  source) is permanently blocked by the harness constraint — the Azure AI Search
+  infrastructure built in steps 1-4 isn't actually what the live Knowledge Agent uses day to
+  day. It remains a real, independently-verifiable, working RAG pipeline (queryable directly
+  via the AI Search REST API), just not the one wired into the product surface — a legitimate
+  "we built the thing we evaluated, the platform routed us elsewhere for the actual feature"
+  outcome, not wasted work.
+- The Dataverse intelligence fallback's indexing time (many hours for 16 files) is a real
+  operational characteristic worth planning around for any future corpus additions — not a
+  reason to avoid the feature, but not "several minutes" either, contrary to Microsoft's own
+  documentation.
 - The zero-secrets exception (storage account key) turned out to be unnecessary in the end —
   the real fix was the Search service's `authOptions` setting, not a key; managed identity
   handled the actual connection. The key sits unused in Key Vault, harmless but no longer load-
