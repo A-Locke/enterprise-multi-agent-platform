@@ -51,8 +51,50 @@ jobs:
       - name: Pytest
         run: pytest -v
 
+  validate-deploy:
+    name: Validate Deployment (what-if)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_PRINCIPAL_ID: ${{ secrets.AZURE_PRINCIPAL_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
+      AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+      BUDGET_NOTIFICATION_EMAIL: ${{ secrets.BUDGET_NOTIFICATION_EMAIL }}
+      APIM_PUBLISHER_EMAIL: ${{ secrets.APIM_PUBLISHER_EMAIL }}
+      APIM_PUBLISHER_NAME: ${{ secrets.APIM_PUBLISHER_NAME }}
+      AZURE_API_APP_CLIENT_ID: ${{ secrets.AZURE_API_APP_CLIENT_ID }}
+      LOCAL_DEV_PRINCIPAL_ID: ${{ secrets.LOCAL_DEV_PRINCIPAL_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install azd
+        uses: Azure/setup-azd@v2
+
+      - name: Log in with Azure (Federated Credentials)
+        run: |
+          azd auth login \
+            --client-id "$AZURE_CLIENT_ID" \
+            --federated-credential-provider "github" \
+            --tenant-id "$AZURE_TENANT_ID"
+        shell: bash
+
+      - name: What-if preview (no changes applied)
+        # `azd provision --preview` reuses azd's own ${VAR} parameter substitution
+        # (infra/main.parameters.json), unlike a raw `az deployment ... what-if` call which
+        # would need the same env-var resolution reimplemented separately -- see
+        # .github/workflows/azure-dev.yml for why azd env new/set need these values passed
+        # explicitly rather than relying on process env alone.
+        run: |
+          azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt
+          azd env set AZURE_PRINCIPAL_ID "$AZURE_PRINCIPAL_ID"
+          azd provision --preview
+        shell: bash
+
   # Added as each milestone introduces the corresponding app:
   # - apps/functions (pytest)
   # - apps/web (lint, type-check, unit tests)
-  # - infra deploy validation (`az deployment sub what-if`) once OIDC federated
-  #   credentials are configured - see manual-setup.md #7.
