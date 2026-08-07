@@ -793,3 +793,85 @@ was wrong, now documented accurately.
 ### Next steps
 
 - Milestone 9: ALM & Governance — Power Platform solutions/environment variables/Build Tools pipeline alongside the existing `azd`/GitHub Actions one.
+
+## Milestone 9 — ALM & Governance
+
+**Status:** complete
+**Date started:** 2026-08-07
+**Date completed:** 2026-08-07
+
+### Azure: closing the OIDC gap
+
+`ci.yml` had carried a comment about missing GitHub↔Azure OIDC trust since Milestone 0/1
+(`manual-setup.md` #7). `azd pipeline config` automated most of it — a User-Assigned Managed
+Identity with federated credentials, GitHub secrets for the connection values — but the
+generated workflow auto-committed, auto-pushed, and auto-triggered a run on `push` to `main`
+without review, and stored several of those values as unmasked GitHub **Variables** rather
+than **Secrets**. Given this project's history with accidentally-exposed identifiers, that got
+treated as a real finding, not a cosmetic one: rewrote the workflow to `workflow_dispatch`
+only (matching every other deploy path in this project — deliberate, reviewed, not
+auto-on-push) and migrated every value from Variables to Secrets.
+
+What followed was a genuinely long live-debugging chain — six distinct root causes, each
+confirmed via an actual server response before being called fixed, not guessed and moved past:
+a bulk-migration script that had silently corrupted several secrets to a literal `-` (the
+same stray hyphen also explained why timestamps and unrelated GUIDs in the logs looked
+garbled — GitHub's log masking replaces *every* occurrence of a registered secret's value
+anywhere in a run, and a one-character secret is a very common substring); GitHub's newer
+"immutable ID" OIDC subject format not matching the federated credential `azd pipeline config`
+created; `azd`'s own environment state not inheriting subscription/location/principal-id from
+process environment variables even when `${VAR}` substitution elsewhere does; `Contributor`
+not including `Microsoft.Authorization/roleAssignments/write` (by design — Azure separates
+resource management from access management), needing an additional `Role Based Access Control
+Administrator` grant scoped to just the app's resource group; and `azd deploy` needing
+`AZURE_CONTAINER_REGISTRY_ENDPOINT` as an exact-name environment variable it doesn't derive
+from Bicep outputs automatically. Full detail in [ADR-0013](docs/adr/0013-combined-release-process.md).
+
+Also added a `validate-deploy` job to `ci.yml` (`azd provision --preview`, a what-if-style
+check) running on every PR and push to `main`, reusing the same OIDC identity.
+
+### Power Platform: a second environment, for real
+
+The original plan was to evaluate a full Build Tools promotion pipeline against a lighter
+structural-validation-only alternative. Decided to attempt the full path — this project
+exists as much as a learning exercise as a portfolio piece, and a promotion pipeline needs
+somewhere to promote *to*. Since the first Dataverse environment came from a free Power Apps
+Developer Plan signup (ADR-0004), a second one did too: a new organizational user
+(`lockeadmintest@...`), Global Administrator, signed up for its own free Developer Plan
+environment (`test-em-3b9dc26e`) — genuinely no cost, confirmed via `az consumption budget
+list` before and after (still $0.40 of the $180 monthly guardrail).
+
+Building the actual pipeline surfaced its own chain of real issues, each root-caused against
+actual Dataverse error text rather than assumed: the tenant admin needed `pac admin
+self-elevate` in the *new* environment specifically (Global Admin doesn't auto-grant a
+Dataverse role there the way the Developer Plan signup does for its own creator); packing a
+solution as Managed from source that was only ever unpacked as Unmanaged fails outright,
+needing a `--packagetype Both` dual-unpack (and the second unpack pass needed `--allowDelete
+false`, or it deletes the first pass's files as "unnecessary" from its own single-type view);
+a GitHub secret set via a piped `az keyvault secret show | gh secret set --body -` produced an
+`Invalid client secret` error despite the value being verified correct moments earlier via a
+direct token request — the same pipe-corruption pattern as the Azure secrets, fixed the same
+way (capture to a variable first); the `import-solution` action's file input is named
+`solution-file`, not `path`; and two distinct real Dataverse issues surfaced only by a
+cold-start import into a brand-new environment — a stale `<MissingDependencies>` snapshot
+Dataverse embeds in every export (informational, safe to clear, a documented Microsoft
+workaround) and, underneath that, a genuine gap: the Admin Console app module's SiteMap had
+never been added to the solution as its own component, only worked by coincidence in dev
+because the sitemap already existed there outside the package. Fixed via the Dataverse
+`AddSolutionComponent` Web API action, then re-captured through export/unpack. Full diagnosis
+chain in [ADR-0013](docs/adr/0013-combined-release-process.md).
+
+Added a `validate-power-platform-solution` job to `ci.yml` (pack → unpack roundtrip, no live
+Dataverse credentials needed) and a new `power-platform-deploy.yml`
+(`workflow_dispatch`-only) that packs the solution Managed and imports it into the test
+environment via `microsoft/powerplatform-actions`, authenticated as a dedicated Dataverse
+Application User (client-credentials, secret in Key Vault + a GitHub secret).
+
+Both pipelines were confirmed working end-to-end via live evidence, not green checkmarks
+alone: a real Container App image built and deployed through the OIDC pipeline, and the
+managed business-data solution confirmed present (`ismanaged: true`) in the test Dataverse
+environment via a direct API query.
+
+### Next steps
+
+- Milestone 10: Hardening & Docs finalization — security review (incl. Content Safety), full cost analysis (Azure + Power Platform licensing), documentation pass, demo recording, roadmap.

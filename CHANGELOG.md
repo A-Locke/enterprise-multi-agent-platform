@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Milestone 9] — 2026-08-07 — ALM & Governance
+
+### Added
+- `.github/workflows/azure-dev.yml`: GitHub↔Azure OIDC deploy pipeline (`workflow_dispatch`-only), federated credentials on a dedicated User-Assigned Managed Identity — no stored Azure secret. Verified end-to-end (real `azd provision` + `azd deploy`).
+- `.github/workflows/ci.yml`: `validate-deploy` job (`azd provision --preview`) and `validate-power-platform-solution` job (pack/unpack roundtrip, no live credentials).
+- `.github/workflows/power-platform-deploy.yml`: Power Platform Build Tools promotion pipeline (`workflow_dispatch`-only), packs the business-data solution Managed and imports it into a new test Dataverse environment via a dedicated Application User service principal. Verified end-to-end (managed solution confirmed present in test via direct API query).
+- Second Dataverse environment (`test-em-3b9dc26e`), free via a second Power Apps Developer Plan signup — same no-billing path as ADR-0004's original environment.
+- `power-platform/solutions/business-data`: dual managed/unmanaged solution source (`--packagetype Both`), and a previously-missing SiteMap component for the Admin Console app module.
+- ADR-0013: combined release process, documenting both pipelines and the full chain of real issues hit standing them up.
+
+### Fixed
+- A bulk GitHub Secrets migration had silently corrupted several secrets (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_ENV_NAME`, `AZURE_LOCATION`, `AZURE_SUBSCRIPTION_ID`, and others) to a literal `-` character — re-set all of them directly and verified via length checks.
+- GitHub's newer "immutable ID" OIDC subject claim format didn't match the federated credential `azd pipeline config` created — added matching credentials for both `main` and `pull_request`.
+- `azd`'s own environment state doesn't inherit subscription/location/principal-id from process env in a fresh CI job — now set explicitly via `azd env new --subscription --location` and `azd env set AZURE_PRINCIPAL_ID`.
+- `Contributor` doesn't include `Microsoft.Authorization/roleAssignments/write` — granted `Role Based Access Control Administrator` scoped to the app's resource group only.
+- `azd deploy` needed `AZURE_CONTAINER_REGISTRY_ENDPOINT` set explicitly (not a Bicep output it reads automatically).
+- Dataverse embeds a stale `<MissingDependencies>` snapshot in exported solutions that replays as a real check on cold-start import — cleared per the documented Microsoft workaround.
+- The Admin Console app module's SiteMap was never added to the solution as its own component — only worked in dev by coincidence (the sitemap already existed there outside the package). Added via the Dataverse `AddSolutionComponent` action.
+
+Full diagnosis chain for all of the above in [ADR-0013](docs/adr/0013-combined-release-process.md) and `PROJECT_JOURNAL.md`.
+
 ## [Milestone 8] — 2026-08-07 — Observability & Ops
 
 ### Added

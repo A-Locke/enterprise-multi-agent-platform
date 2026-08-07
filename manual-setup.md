@@ -60,6 +60,8 @@ gh auth login   # already done for this environment
 
 **Action:** after `azd pipeline config` runs, verify the federated credential subject in the Entra app registration matches `repo:<org>/<repo>:ref:refs/heads/main` (or the configured environment).
 
+**Resolved for Milestone 9 as follows:** the check above wasn't just precautionary — GitHub now presents OIDC subject claims using an "immutable ID" format (`repo:OWNER@ownerId/REPO@repoId:ref:refs/heads/main`) that didn't match what `azd pipeline config` created, failing with `AADSTS700213: No matching federated identity record found`. Fixed by adding a second federated credential per trigger type (`main` ref, `pull_request`) using the immutable-ID subject — both formats coexist fine on the same identity. See [ADR-0013](docs/adr/0013-combined-release-process.md) for the full chain (this was one of six distinct root causes hit standing up the pipeline, not the only one).
+
 ## 8. Container image builds require a local Docker daemon
 
 **Manual because:** `azd deploy`'s remote-build option (ACR Tasks, server-side build with no local Docker needed) is disabled on this subscription entirely — `TasksOperationsNotAllowed`, a platform restriction with no config workaround (Microsoft's own suggestion is to file a support request). Local Docker build is the fallback, which needs Docker Desktop actually running, not just installed.
