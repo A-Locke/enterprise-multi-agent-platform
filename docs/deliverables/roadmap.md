@@ -14,9 +14,17 @@ documented gap rather than a speculative feature.
   security role scoped to solution import/export privileges only would close a real gap
   without changing pipeline behavior.
 - **Extend the Power Platform Build Tools pipeline to a Prod-tier environment.** The current
-  pipeline proves dev → test; a third environment and one more `pac admin assign-user` call
-  (the same pattern established in [ADR-0013](../adr/0013-combined-release-process.md)) would
-  complete the three-stage story.
+  pipeline proves dev → test — now promoting the Copilot Studio agent itself alongside the
+  Dataverse business-data solution ([ADR-0015](../adr/0015-copilot-studio-agent-promotion.md))
+  — a third environment and one more `pac admin assign-user` call (the same pattern
+  established in [ADR-0013](../adr/0013-combined-release-process.md)) would complete the
+  three-stage story.
+- **A real fix for the custom-connector-connection-per-environment problem.** ADR-0015 found
+  two genuine Microsoft platform limitations (no clean way to move a custom connector's OAuth
+  connection between environments) and worked around them with a placeholder connection
+  reference plus a manual one-time reconnect. Worth periodically re-checking Microsoft's own
+  ALM guidance for this — it's an actively evolving area of the platform, not something this
+  project is likely to solve better than Microsoft eventually will.
 - **Content Safety output moderation**, not just input. [ADR-0014](../adr/0014-content-safety.md)
   deliberately scoped to input-only for this pass; the model's own default filter covers
   output today, but a dedicated check would give consistent, project-controlled thresholds on

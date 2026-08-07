@@ -12,6 +12,11 @@ This document lists **only** the actions that cannot reasonably be automated for
 3. Sign in as that new user at the **[Power Apps Developer Plan](https://make.powerapps.com/developerplan)** signup — this provisions a free, indefinite, non-production Dataverse environment in the *same* tenant, with no credit card and no eligibility gate (a different, more permissive signup flow than the M365 Developer Program).
 4. Use this same new user for `pac auth create` and Copilot Studio going forward.
 
+**Repeated for Milestone 9:** the same pattern (new organizational user → Power Apps
+Developer Plan signup) was used again to provision a second, free environment for real
+dev→test promotion testing — see item 3's "Repeated for Milestone 9" note and
+[ADR-0013](docs/adr/0013-combined-release-process.md).
+
 ## 2. Initial interactive logins
 
 **Manual because:** the first credential handshake for each CLI requires an interactive browser/device-code flow; there is no bootstrap secret to script this from a clean machine.
@@ -32,6 +37,14 @@ gh auth login   # already done for this environment
 
 **Known hiccup:** this tenant (Switzerland-based) is in the rollout group for Microsoft's newer "macro region geography" environment-creation requirement (also applies to Canada/Norway/France tenants). The `pac admin create --region <name>` CLI and the `make.preview.powerapps.com` quick-create panel both rejected every region string tried (`macroRegion '...' is not valid` / `macroRegion must be specified`) — the valid macro-region tokens aren't documented anywhere. **Fix:** use the full wizard at [admin.powerplatform.microsoft.com](https://admin.powerplatform.microsoft.com) → Environments → **+ New** (not the CLI, not the preview-portal quick panel) and pick a value from its **Region** dropdown directly — that dropdown is populated dynamically with the tenant's actual valid options and resolves correctly server-side.
 
+**Repeated for Milestone 9 (test environment):** provisioning a second environment for real
+dev→test promotion followed a slightly different sequence — the admin center wizard's **+
+New** created the environment itself without Dataverse attached (`Dataverse: No` in the
+environment list), requiring a separate, explicit **Add Dataverse database** action
+afterward (same wizard, environment details page) to actually provision the database. Both
+steps are portal-only either way; recorded here since the single-step Developer Plan signup
+flow (item 1) doesn't always produce a Dataverse-attached environment on the first try.
+
 ## 4. Microsoft Entra ID admin consent
 
 **Manual because:** app registrations and their requested API permissions (Microsoft Graph delegated scopes, custom App Roles) can be created via `az ad app create`/Microsoft Graph API, but granting **tenant admin consent** for those permissions is a deliberate security gate that Microsoft requires as an interactive portal action (or `az ad app permission admin-consent`, which itself still requires an account with Global/Privileged Role Administrator rights present at run time).
@@ -43,6 +56,8 @@ gh auth login   # already done for this environment
 **Manual because:** as of this writing, creating a Copilot Studio agent, configuring generative orchestration/topics, wiring a custom action to the custom-engine-agent backend, and publishing to a channel (Teams) are maker-portal-driven experiences — Microsoft does not yet expose a CLI/ARM/Bicep surface for authoring Copilot Studio agent content (only export/import of an already-authored agent as a solution is scriptable via `pac`).
 
 **Action:** author the agent in [copilotstudio.microsoft.com](https://copilotstudio.microsoft.com) (Milestone 3), then export it as a solution so subsequent environment promotion is handled by the Power Platform ALM pipeline, not by repeating manual authoring.
+
+**Resolved as follows:** the agent (and its Connected Agents) has no registered Dataverse `componenttype` at all — the only supported way to add it to a solution is the maker portal's own Solutions UI ("Add existing" → Copilot), a manual, one-time step per solution, not scriptable. Once added, the solution exports and promotes through `power-platform-deploy.yml` automatically like any other. See [ADR-0015](docs/adr/0015-copilot-studio-agent-promotion.md) for the full path, including two further Dataverse/Copilot Studio platform limitations hit along the way (custom connectors need their own dedicated solution; a custom connector's internal ID — and so any connection reference naming it — is environment-specific and can't survive an environment move automatically, needing a one-time manual reconnect per environment).
 
 ## 6. Azure AI Foundry / Azure OpenAI model access and quota
 

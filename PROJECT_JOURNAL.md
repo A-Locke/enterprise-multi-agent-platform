@@ -992,3 +992,47 @@ This closes the planned milestone sequence (0–10). Remaining open items are tr
 milestone" — the near-term list (Application Insights wiring, least-privilege Dataverse CI/CD
 role, a third Power Platform environment) is real, prioritized, and ready to pick up
 independently of any further numbered milestone.
+
+### Post-milestone: promoting the Copilot Studio agent itself
+
+The walkthrough that surfaced the Security Defaults finding above also surfaced a bigger gap:
+the test environment's Copilot Studio dashboard showed zero agents. The Power Platform
+pipeline (Milestone 9) only ever promoted the Dataverse business-data solution — the agent
+itself was never captured as a solution at all, despite `manual-setup.md` #5 originally
+calling for exactly that.
+
+Closing this took six distinct, individually-verified findings, each confirmed against real
+Dataverse responses or Microsoft's own documentation rather than assumed: Copilot Studio
+licensing (the "Copilot Studio Authors" group) and Dataverse environment access are two
+independent gates, not one; bots have no registered Dataverse `componenttype` at all (checked
+directly against the org's own metadata, all 90 entries), so adding one to a solution is
+maker-portal-only; exporting a solution containing both a bot and its custom-connector
+connection reference fails outright — confirmed the fix isn't "put the connector in the
+solution" but "put the connector in its **own**, separate solution, imported first," per
+Microsoft's own documented known issue; even then, the connection reference itself had to be
+removed from the agent's solution entirely before export would succeed; a custom connector's
+internal ID is regenerated per environment (verified: dev's ended `...44e6bfd929e5f407`, the
+same connector re-imported into test ended `...d8ba501759f95b99`), which is the actual root
+cause and is, itself, a second documented Microsoft "Known issue" — a connection reference's
+logical name bakes in this hash, so it can never be valid in more than one environment
+automatically; and finally, a placeholder connection reference (matching dev's stale logical
+name, pointed at test's own connector) was enough to satisfy the import dependency check, with
+the real OAuth connection needing the same one-time manual reconnect already accepted for the
+Teams/Outlook connections.
+
+Extended `power-platform-deploy.yml` accordingly: pack/import order is now
+`platform-api-connector` → placeholder-connection-reference creation (idempotent) →
+`conversational-agent`, alongside the existing `business-data` steps. Along the way, caught
+and redacted several real values the earlier sensitive-content sweeps hadn't checked for
+specifically — a real tenant ID, the API app's client ID, the APIM hostname, and the
+connector's own redirect URI, all embedded inside the exported connector's own JSON files,
+plus a real environment URL stored as a bot action's default value. All now placeholder-
+committed and hydrated from GitHub secrets at pack time.
+
+Verified live, twice: once locally via direct `pac solution import` before touching the
+pipeline, then again through the actual GitHub Actions run (which needed one extra fix —
+`pac`/the portal-based action can't convert an already-unmanaged solution to managed on
+import, and my own earlier local testing had left both new solutions unmanaged in test;
+deleted both and re-ran). Final run: all 15 steps green, all three bots confirmed present in
+test via direct API query, both new solutions confirmed `ismanaged: true`. Full diagnosis
+chain in [ADR-0015](docs/adr/0015-copilot-studio-agent-promotion.md).

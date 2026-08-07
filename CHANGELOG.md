@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Post-Milestone-10] — 2026-08-07 — Copilot Studio agent promotion
+
+### Added
+- `power-platform/solutions/conversational-agent`: the parent Copilot Studio agent and both Connected Agents (Knowledge, Enterprise Integration) captured as a source-controlled solution.
+- `power-platform/solutions/platform-api-connector`: the custom API connector, captured in its own dedicated solution (required — Dataverse won't export a connector alongside a connection reference to it).
+- `.github/workflows/power-platform-deploy.yml`: promotes both new solutions to test, in the required order, including an idempotent step that pre-creates a placeholder connection reference to satisfy Dataverse's import dependency check.
+- ADR-0015: documents the full six-finding root-cause chain, including two genuine Microsoft platform limitations (custom connectors need their own solution; a connector's internal ID — and any connection reference naming it — is environment-specific and can't survive an environment move automatically).
+
+### Fixed
+- Redacted a real tenant ID, client ID, APIM hostname, connector redirect URI, and environment URL found embedded in the exported connector/bot component files — none of the earlier sensitive-content sweeps had checked for these specific patterns. Hydrated back from GitHub secrets at pack time, never committed.
+- The GitHub Actions run initially failed importing the connector solution as managed — an artifact of earlier local `pac` testing having left both new solutions unmanaged in test (Dataverse won't convert modes on import). Deleted both and re-ran.
+
+Full diagnosis chain in [ADR-0015](docs/adr/0015-copilot-studio-agent-promotion.md) and `PROJECT_JOURNAL.md`.
+
 ## [Milestone 10] — 2026-08-07 — Hardening & Docs finalization
 
 ### Added

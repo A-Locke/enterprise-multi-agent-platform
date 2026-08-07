@@ -9,7 +9,7 @@ topic rather than duplicating it — this doc is a map, not the territory.
 2. **Read `manual-setup.md`** before trying to reproduce this environment from scratch — it
    lists every step that genuinely can't be scripted, and why (tenant/subscription creation,
    the Power Platform region-picker quirk, Copilot Studio licensing, OIDC trust verification).
-3. **Skim `docs/adr/` in order.** Fourteen ADRs, each one a real decision with its reasoning —
+3. **Skim `docs/adr/` in order.** Fifteen ADRs, each one a real decision with its reasoning —
    reading them in sequence tells the architecture's story better than a diagram alone would.
 4. **Skim `PROJECT_JOURNAL.md`.** Every real bug this project hit, root-caused, in
    chronological order. If something breaks that looks unfamiliar, check

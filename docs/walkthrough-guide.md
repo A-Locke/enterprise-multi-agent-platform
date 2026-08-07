@@ -9,7 +9,12 @@ Each section is independent — skip around, no need to do these in order.
 ## 1. Copilot Studio conversation
 
 Open the agent in [copilotstudiomanager.microsoft.com](https://copilotstudio.microsoft.com) →
-your agent → **Test** (the Preview pane).
+your agent → **Test** (the Preview pane). The agent now exists in both the dev and test
+Power Platform environments (promoted via `power-platform-deploy.yml`,
+[ADR-0015](adr/0015-copilot-studio-agent-promotion.md)) — dev is the one to actually converse
+with, since test's copy of the custom-API connection needs a one-time manual reconnect before
+it'll work (a genuine Microsoft platform limitation, not a gap in this project's automation —
+see the ADR).
 
 - **Ask a knowledge question**: something with a real, verifiable answer from the indexed
   corpus (RAG via AI Search/Dataverse — [ADR-0010](adr/0010-rag-native-ai-search.md)). You
@@ -85,7 +90,7 @@ No clicking required — just worth skimming to get a feel for the depth:
 
 - `PROJECT_JOURNAL.md` — chronological, milestone-by-milestone, every real bug and its root
   cause.
-- `docs/adr/` — fourteen Architecture Decision Records, one per non-trivial choice.
+- `docs/adr/` — fifteen Architecture Decision Records, one per non-trivial choice.
 - `docs/troubleshooting.md` — the same issues, indexed by symptom instead of chronology.
 
 This is the part that distinguishes a project documented like a real engagement from one
