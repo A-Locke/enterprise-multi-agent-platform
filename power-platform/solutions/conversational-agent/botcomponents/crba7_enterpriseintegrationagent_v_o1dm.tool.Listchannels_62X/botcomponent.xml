@@ -1,0 +1,11 @@
+<botcomponent schemaname="crba7_enterpriseintegrationagent_v_o1dm.tool.Listchannels_62X">
+  <componenttype>9</componenttype>
+  <description>Lists all the channels for a specific team</description>
+  <iscustomizable>0</iscustomizable>
+  <name>List channels</name>
+  <parentbotid>
+    <schemaname>crba7_enterpriseintegrationagent_v_o1dm</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

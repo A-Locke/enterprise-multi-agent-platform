@@ -118,6 +118,34 @@ jobs:
           solution-folder: ${{ runner.temp }}\business-data-roundtrip
           solution-type: Unmanaged
 
+      - name: Pack solution (platform-api-connector)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: power-platform/solutions/platform-api-connector
+          solution-file: ${{ runner.temp }}\connector.zip
+          solution-type: Unmanaged
+
+      - name: Unpack packed zip (platform-api-connector)
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: ${{ runner.temp }}\connector.zip
+          solution-folder: ${{ runner.temp }}\connector-roundtrip
+          solution-type: Unmanaged
+
+      - name: Pack solution (conversational-agent)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: power-platform/solutions/conversational-agent
+          solution-file: ${{ runner.temp }}\conv-agent.zip
+          solution-type: Unmanaged
+
+      - name: Unpack packed zip (conversational-agent)
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: ${{ runner.temp }}\conv-agent.zip
+          solution-folder: ${{ runner.temp }}\conv-agent-roundtrip
+          solution-type: Unmanaged
+
   # Added as each milestone introduces the corresponding app:
   # - apps/functions (pytest)
   # - apps/web (lint, type-check, unit tests)

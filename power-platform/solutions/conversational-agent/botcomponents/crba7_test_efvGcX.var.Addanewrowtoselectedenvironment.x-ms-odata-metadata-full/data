@@ -1,0 +1,4 @@
+kind: AgentVariable
+name: Addanewrowtoselectedenvironment.x-ms-odata-metadata-full
+type: "{\"type\":\"boolean\",\"title\":\"Return Full Metadata\",\"description\":\"The header parameter to customer to opt-in returning full odata metadata in response.\",\"x-ms-visibility\":\"advanced\",\"x-ms-property-name-alias\":\"x-ms-odata-metadata-full\"}"
+defaultValue: true

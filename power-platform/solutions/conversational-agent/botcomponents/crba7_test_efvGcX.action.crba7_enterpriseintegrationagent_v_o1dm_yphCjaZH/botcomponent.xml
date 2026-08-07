@@ -1,0 +1,11 @@
+<botcomponent schemaname="crba7_test_efvGcX.action.crba7_enterpriseintegrationagent_v_o1dm_yphCjaZH">
+  <componenttype>9</componenttype>
+  <description>Handles requests involving enterprise systems and integrations — Teams, Outlook, SharePoint, and other Microsoft 365 services.</description>
+  <iscustomizable>0</iscustomizable>
+  <name>Enterprise Integration Agent</name>
+  <parentbotid>
+    <schemaname>crba7_test_efvGcX</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

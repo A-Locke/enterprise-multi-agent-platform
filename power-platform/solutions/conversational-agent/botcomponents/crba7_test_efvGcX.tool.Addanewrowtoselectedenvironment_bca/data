@@ -1,0 +1,64 @@
+kind: ConnectorTool
+authMode: Maker
+connectionReference: crba7_test_efvGcX.cr.shared_commondataserviceforapps.8d55b203-7f18-4174-a614-b04be883c94c
+connectorId: /providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps
+operationId: CreateRecordWithOrganization
+toolInputs:
+  - name: organization
+    value:
+      kind: ContextVariableReference
+      name: DataverseEnvironment
+
+  - name: entityName
+    value:
+      kind: ContextVariableReference
+      name: Addanewrowtoselectedenvironment.entityName
+
+  - name: item.crba7_agentname
+    displayName: Agent Name
+    description: The name of the agent (or agents) involved in this conversation, e.g. "Knowledge Agent" or "Enterprise Integration Agent". Use the actual agent name, not a generic description.
+
+  - name: item.crba7_conversationauditlogid
+    displayName: Conversation Audit Log
+    description: Unique identifier for entity instances
+
+  - name: item.importsequencenumber
+    displayName: Import Sequence Number
+    description: Sequence number of the import that created this record.
+
+  - name: item.crba7_logentry
+    displayName: Log Entry
+    description: A short, human-readable title for this audit record, e.g. "Conversation with Knowledge Agent - 2026-08-06".
+
+  - name: item.crba7_outcomesummary
+    displayName: Outcome Summary
+    description: A brief summary of what the user asked and how the conversation was resolved -- what was answered, what action was taken, or why it couldn't be completed. Keep it factual and concise, not a full transcript.
+
+  - name: item.ownerid@odata.bind
+    displayName: Owner (Owners)
+    description: Owner Id
+
+  - name: item.overriddencreatedon
+    displayName: Record Created On
+    description: Date and time that the record was migrated.
+
+  - name: item.statuscode
+    displayName: Status Reason
+    description: Reason for the status of the Conversation Audit Log
+
+  - name: item.timezoneruleversionnumber
+    displayName: Time Zone Rule Version Number
+    description: For internal use only.
+
+  - name: item.crba7_UserLookup@odata.bind
+    displayName: User (Users)
+    description: Reference to the Dataverse system user record for the person who had this conversation, used to enforce per-user access to their own audit entries. Leave unset if the user's system record cannot be reliably determined.
+
+  - name: item.utcconversiontimezonecode
+    displayName: UTC Conversion Time Zone Code
+    description: Time zone code that was in use when the record was created.
+
+  - name: x-ms-odata-metadata-full
+    value:
+      kind: ContextVariableReference
+      name: Addanewrowtoselectedenvironment.x-ms-odata-metadata-full1

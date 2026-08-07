@@ -1,0 +1,11 @@
+<botcomponent schemaname="crba7_test_efvGcX.action.crba7_knowledgeagent_dQ3GYl_BbdE4CQ8">
+  <componenttype>9</componenttype>
+  <description>Searches the platform's knowledge base to answer questions about documented facts, policies, or reference material.</description>
+  <iscustomizable>0</iscustomizable>
+  <name>Knowledge Agent</name>
+  <parentbotid>
+    <schemaname>crba7_test_efvGcX</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

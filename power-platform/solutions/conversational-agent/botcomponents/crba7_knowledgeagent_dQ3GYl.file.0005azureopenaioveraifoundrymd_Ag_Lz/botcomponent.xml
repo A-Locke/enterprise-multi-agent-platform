@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.0005azureopenaioveraifoundrymd_Ag_Lz">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in 0005-azure-openai-over-ai-foundry.md</description>
+  <filedata mimetype="application/octet-stream">0005-azure-openai-over-ai-foundry.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>0005-azure-openai-over-ai-foundry.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

@@ -1,0 +1,10 @@
+<botcomponent schemaname="crba7_test_efvGcX.var.Addanewrowtoselectedenvironment.item_crba7_Userodata_bind">
+  <componenttype>12</componenttype>
+  <iscustomizable>0</iscustomizable>
+  <name>Addanewrowtoselectedenvironment.item_crba7_User@odata_bind</name>
+  <parentbotid>
+    <schemaname>crba7_test_efvGcX</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

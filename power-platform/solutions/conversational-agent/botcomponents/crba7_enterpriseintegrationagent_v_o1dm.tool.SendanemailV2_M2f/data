@@ -1,0 +1,5 @@
+kind: ConnectorTool
+authMode: Invoker
+connectionReference: crba7_enterpriseintegrationagent_v_o1dm.cr.shared_office365
+connectorId: /providers/Microsoft.PowerApps/apis/shared_office365
+operationId: SendEmailV2

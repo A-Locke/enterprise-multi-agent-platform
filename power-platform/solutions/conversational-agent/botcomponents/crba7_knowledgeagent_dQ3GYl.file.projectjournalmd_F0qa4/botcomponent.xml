@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.projectjournalmd_F0qa4">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in PROJECT_JOURNAL.md</description>
+  <filedata mimetype="application/octet-stream">PROJECT_JOURNAL.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>PROJECT_JOURNAL.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

@@ -1,0 +1,10 @@
+<botcomponent schemaname="crba7_test_efvGcX.var.Addanewrowtoselectedenvironment.x-ms-odata-metadata-full1">
+  <componenttype>12</componenttype>
+  <iscustomizable>0</iscustomizable>
+  <name>Addanewrowtoselectedenvironment.x-ms-odata-metadata-full1</name>
+  <parentbotid>
+    <schemaname>crba7_test_efvGcX</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

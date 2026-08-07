@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.0006copilotconnectormanagedidentitymd_p9ZP-">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in 0006-copilot-connector-managed-identity.md</description>
+  <filedata mimetype="application/octet-stream">0006-copilot-connector-managed-identity.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>0006-copilot-connector-managed-identity.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

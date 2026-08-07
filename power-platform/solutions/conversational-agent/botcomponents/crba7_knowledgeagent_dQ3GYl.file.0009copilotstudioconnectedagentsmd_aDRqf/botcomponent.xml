@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.0009copilotstudioconnectedagentsmd_aDRqf">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in 0009-copilot-studio-connected-agents.md</description>
+  <filedata mimetype="application/octet-stream">0009-copilot-studio-connected-agents.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>0009-copilot-studio-connected-agents.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

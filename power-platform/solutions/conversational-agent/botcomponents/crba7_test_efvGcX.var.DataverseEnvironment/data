@@ -1,0 +1,4 @@
+kind: AgentVariable
+name: DataverseEnvironment
+type: "{\"type\":\"string\",\"title\":\"Environment\",\"x-ms-dynamic-list\":{\"operationId\":\"GetOrganizations\",\"parameters\":{},\"itemsPath\":\"value\",\"itemValuePath\":\"Url\",\"itemTitlePath\":\"FriendlyName\"},\"description\":\"Choose an environment\",\"x-ms-visibility\":\"important\",\"x-ms-property-name-alias\":\"organization\"}"
+defaultValue: <POWER_PLATFORM_ENVIRONMENT_URL>

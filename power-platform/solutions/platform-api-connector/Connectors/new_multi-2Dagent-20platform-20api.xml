@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Connector xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <connectorid>9fa5e50f-3d90-f111-8077-002248f4083c</connectorid>
+  <description>Custom connector for Copilot Studio / Power Platform to call the platform's Semantic Kernel agent through APIM.</description>
+  <displayname>Multi-Agent Platform API</displayname>
+  <iconbrandcolor>#007ee5</iconbrandcolor>
+  <name>new_multi-2Dagent-20platform-20api</name>
+  <connectortype>1</connectortype>
+  <openapidefinition>/Connector/new_multi-2Dagent-20platform-20api_openapidefinition.json</openapidefinition>
+  <connectionparameters>/Connector/new_multi-2Dagent-20platform-20api_connectionparameters.json</connectionparameters>
+  <policytemplateinstances>/Connector/new_multi-2Dagent-20platform-20api_policytemplateinstances.json</policytemplateinstances>
+  <iconblob>/Connector/new_multi-2Dagent-20platform-20api_iconblob.Png</iconblob>
+</Connector>

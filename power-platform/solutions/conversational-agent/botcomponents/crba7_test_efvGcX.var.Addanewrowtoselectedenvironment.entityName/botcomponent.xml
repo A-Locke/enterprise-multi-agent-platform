@@ -1,0 +1,10 @@
+<botcomponent schemaname="crba7_test_efvGcX.var.Addanewrowtoselectedenvironment.entityName">
+  <componenttype>12</componenttype>
+  <iscustomizable>0</iscustomizable>
+  <name>Conversation Audit Logs</name>
+  <parentbotid>
+    <schemaname>crba7_test_efvGcX</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

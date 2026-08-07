@@ -1,0 +1,5 @@
+kind: ConnectorTool
+authMode: Invoker
+connectionReference: crba7_enterpriseintegrationagent_v_o1dm.cr.shared_teams
+connectorId: /providers/Microsoft.PowerApps/apis/shared_teams
+operationId: GetChannelsForGroup

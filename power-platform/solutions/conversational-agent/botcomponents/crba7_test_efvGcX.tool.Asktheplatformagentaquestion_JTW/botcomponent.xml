@@ -1,0 +1,11 @@
+<botcomponent schemaname="crba7_test_efvGcX.tool.Asktheplatformagentaquestion_JTW">
+  <componenttype>9</componenttype>
+  <description>Calls the Semantic Kernel agent (Admin or Agent.User role required).</description>
+  <iscustomizable>0</iscustomizable>
+  <name>Ask the platform agent a question</name>
+  <parentbotid>
+    <schemaname>crba7_test_efvGcX</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

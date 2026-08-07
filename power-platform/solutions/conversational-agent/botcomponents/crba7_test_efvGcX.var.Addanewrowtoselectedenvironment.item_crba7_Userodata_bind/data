@@ -1,0 +1,4 @@
+kind: AgentVariable
+name: Addanewrowtoselectedenvironment.item_crba7_User@odata_bind
+type: "{\"type\":\"string\",\"title\":\"User (Conversation Audit Logs)\",\"description\":\"\",\"x-ms-visibility\":\"advanced\",\"x-ms-property-name-alias\":\"crba7_User@odata.bind\"}"
+defaultValue: none

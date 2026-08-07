@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.manualsetupmd_5Rqg-">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in manual-setup.md</description>
+  <filedata mimetype="application/octet-stream">manual-setup.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>manual-setup.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

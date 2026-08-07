@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.0001microsoftplatformevaluationmd_-_nXe">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in 0001-microsoft-platform-evaluation.md</description>
+  <filedata mimetype="application/octet-stream">0001-microsoft-platform-evaluation.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>0001-microsoft-platform-evaluation.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

@@ -1,8 +1,12 @@
 # Manual trigger only -- matches azure-dev.yml's practice of deliberate, reviewed
-# deployments rather than deploying on every push. Promotes the source-controlled
-# business-data solution (power-platform/solutions/business-data) from the dev environment,
-# where it's authored via the maker portal and captured with `pac solution export`, into the
-# test environment as a managed solution.
+# deployments rather than deploying on every push. Promotes three source-controlled
+# solutions from the dev environment into the test environment as managed solutions:
+# - business-data: Dataverse tables, security roles, the admin app (ADR-0012)
+# - platform-api-connector: the custom connector the Copilot Studio agent calls (must be
+#   imported before the agent solution -- Dataverse requires custom connectors in their own
+#   solution, separate from anything referencing them, see ADR-0013)
+# - conversational-agent: the Copilot Studio agent itself, both Connected Agents, topics,
+#   and (for the Knowledge agent) its indexed file corpus (ADR-0013)
 on:
   workflow_dispatch:
 
@@ -19,7 +23,7 @@ jobs:
       - name: Install pac CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
-      - name: Prepare managed copy
+      - name: Prepare managed copy (business-data)
         # The committed source declares <Managed>0</Managed> so deploy-business-data-solution.ps1
         # keeps packing/importing Unmanaged into dev (where components stay editable via the
         # maker portal) -- see ADR-0013. The `_managed.xml` sibling files needed to pack Managed
@@ -33,11 +37,64 @@ jobs:
             -replace '<Managed>0</Managed>', '<Managed>1</Managed>' |
             Set-Content "${{ runner.temp }}\business-data-managed-src\Other\Solution.xml"
 
-      - name: Pack solution (managed)
+      - name: Pack solution (business-data, managed)
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
           solution-folder: ${{ runner.temp }}\business-data-managed-src
           solution-file: ${{ runner.temp }}\business-data-managed.zip
+          solution-type: Managed
+
+      - name: Prepare managed copy (platform-api-connector)
+        # Same Managed-flag-flip pattern as business-data, plus hydrating the connector's
+        # real endpoint/identity values -- the committed source has them redacted to
+        # placeholders (never commit a real tenant ID/client ID/environment hostname, even
+        # inside a solution file) per this repo's global secrets discipline.
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse power-platform/solutions/platform-api-connector "${{ runner.temp }}\connector-managed-src"
+          (Get-Content "${{ runner.temp }}\connector-managed-src\Other\Solution.xml") `
+            -replace '<Managed>0</Managed>', '<Managed>1</Managed>' |
+            Set-Content "${{ runner.temp }}\connector-managed-src\Other\Solution.xml"
+
+          $connectorDir = "${{ runner.temp }}\connector-managed-src\Connectors"
+          Get-ChildItem $connectorDir -Filter *.json | ForEach-Object {
+            (Get-Content $_.FullName -Raw) `
+              -replace '<APIM_HOSTNAME>', '${{ secrets.APIM_HOSTNAME }}' `
+              -replace '<AZURE_API_APP_CLIENT_ID>', '${{ secrets.AZURE_API_APP_CLIENT_ID }}' `
+              -replace '<AZURE_TENANT_ID>', '${{ secrets.AZURE_TENANT_ID }}' `
+              -replace '<COPILOT_CONNECTOR_REDIRECT_URI>', '${{ secrets.COPILOT_CONNECTOR_REDIRECT_URI }}' |
+              Set-Content $_.FullName
+          }
+
+      - name: Pack solution (platform-api-connector, managed)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: ${{ runner.temp }}\connector-managed-src
+          solution-file: ${{ runner.temp }}\connector-managed.zip
+          solution-type: Managed
+
+      - name: Prepare managed copy (conversational-agent)
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse power-platform/solutions/conversational-agent "${{ runner.temp }}\conv-agent-managed-src"
+          (Get-Content "${{ runner.temp }}\conv-agent-managed-src\Other\Solution.xml") `
+            -replace '<Managed>0</Managed>', '<Managed>1</Managed>' |
+            Set-Content "${{ runner.temp }}\conv-agent-managed-src\Other\Solution.xml"
+
+          # The parent bot's "Add a new row" Dataverse action stores its target environment
+          # URL as a default value -- redacted to a placeholder in the committed source
+          # (never commit a real environment URL). Hydrated here to test's own environment,
+          # not dev's, since that's the environment this import is actually targeting.
+          $envVarFile = "${{ runner.temp }}\conv-agent-managed-src\botcomponents\crba7_test_efvGcX.var.DataverseEnvironment\data"
+          (Get-Content $envVarFile -Raw) `
+            -replace '<POWER_PLATFORM_ENVIRONMENT_URL>', '${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}' |
+            Set-Content $envVarFile
+
+      - name: Pack solution (conversational-agent, managed)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: ${{ runner.temp }}\conv-agent-managed-src
+          solution-file: ${{ runner.temp }}\conv-agent-managed.zip
           solution-type: Managed
 
       - name: Who am I (verify service principal auth before import)
@@ -48,7 +105,7 @@ jobs:
           client-secret: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
-      - name: Import solution into test environment
+      - name: Import solution into test environment (business-data)
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
           environment-url: ${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}
@@ -63,3 +120,71 @@ jobs:
           # package -- so a cold-start import into a brand-new environment false-positives
           # on this self-referential dependency. Documented Microsoft workaround.
           skip-dependency-check: true
+
+      - name: Import solution into test environment (platform-api-connector)
+        # Must import before conversational-agent -- Dataverse requires a custom connector
+        # to already exist in the target via its own solution before a connection reference
+        # to it can be imported. See ADR-0013.
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_ID }}
+          client-secret: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          solution-file: ${{ runner.temp }}\connector-managed.zip
+          publish-changes: true
+
+      - name: Ensure placeholder connection reference exists
+        # Custom connectors get a fresh, environment-specific internal ID on every import
+        # (Microsoft's own documented "Known issue" for connection references + custom
+        # connectors across environments -- see ADR-0013). The conversational-agent bot's
+        # action structurally requires a connectionreference with dev's exact (now-stale)
+        # logical name to exist for import to succeed at all; a real working connection
+        # can't survive the environment move automatically regardless. This creates a
+        # placeholder pointing at test's own freshly-imported connector, satisfying the
+        # import dependency check -- the connection itself still needs a one-time manual
+        # reconnect in test's maker portal afterward (same category of manual step as the
+        # Teams/Outlook connections already require).
+        shell: pwsh
+        run: |
+          $body = @{
+            grant_type    = "client_credentials"
+            client_id     = "${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_ID }}"
+            client_secret = "${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}"
+            scope         = "${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}/.default"
+          }
+          $token = (Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" -Body $body).access_token
+          $headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }
+
+          $logicalName = "crba7_test_efvGcX.cr.shared_new-5fmulti-2dagent-20platform-20api-5f44e6bfd929e5f407"
+          $existing = Invoke-RestMethod -Headers $headers `
+            -Uri "${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}/api/data/v9.2/connectionreferences?`$filter=connectionreferencelogicalname eq '$logicalName'"
+
+          if ($existing.value.Count -gt 0) {
+            Write-Host "Placeholder connection reference already exists -- skipping."
+          } else {
+            $connector = Invoke-RestMethod -Headers $headers `
+              -Uri "${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}/api/data/v9.2/connectors?`$filter=name eq 'new_multi-2Dagent-20platform-20api'&`$select=connectorinternalid"
+            $connectorInternalId = $connector.value[0].connectorinternalid
+
+            $createBody = @{
+              connectionreferencelogicalname  = $logicalName
+              connectionreferencedisplayname  = $logicalName
+              connectorid                     = $connectorInternalId
+            } | ConvertTo-Json
+
+            Invoke-RestMethod -Method POST -Headers ($headers + @{ "Content-Type" = "application/json" }) `
+              -Uri "${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}/api/data/v9.2/connectionreferences" `
+              -Body $createBody
+            Write-Host "Placeholder connection reference created."
+          }
+
+      - name: Import solution into test environment (conversational-agent)
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ secrets.POWER_PLATFORM_TEST_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_ID }}
+          client-secret: ${{ secrets.POWER_PLATFORM_PIPELINE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          solution-file: ${{ runner.temp }}\conv-agent-managed.zip
+          publish-changes: true

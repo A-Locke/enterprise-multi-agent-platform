@@ -1,0 +1,12 @@
+<botcomponent schemaname="crba7_knowledgeagent_dQ3GYl.file.0008copilotstudiolicensingmd_vGjkb">
+  <componenttype>14</componenttype>
+  <description>This knowledge source searches information contained in 0008-copilot-studio-licensing.md</description>
+  <filedata mimetype="application/octet-stream">0008-copilot-studio-licensing.md</filedata>
+  <iscustomizable>0</iscustomizable>
+  <name>0008-copilot-studio-licensing.md</name>
+  <parentbotid>
+    <schemaname>crba7_knowledgeagent_dQ3GYl</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

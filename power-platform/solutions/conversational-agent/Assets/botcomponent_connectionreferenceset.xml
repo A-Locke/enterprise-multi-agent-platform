@@ -1,0 +1,14 @@
+<botcomponent_connectionreferenceset>
+  <botcomponent_connectionreference botcomponentid.schemaname="crba7_enterpriseintegrationagent_v_o1dm.tool.Listchannels_62X" connectionreferenceid.connectionreferencelogicalname="crba7_enterpriseintegrationagent_v_o1dm.cr.shared_teams">
+    <iscustomizable>1</iscustomizable>
+  </botcomponent_connectionreference>
+  <botcomponent_connectionreference botcomponentid.schemaname="crba7_enterpriseintegrationagent_v_o1dm.tool.SendanemailV2_M2f" connectionreferenceid.connectionreferencelogicalname="crba7_enterpriseintegrationagent_v_o1dm.cr.shared_office365">
+    <iscustomizable>1</iscustomizable>
+  </botcomponent_connectionreference>
+  <botcomponent_connectionreference botcomponentid.schemaname="crba7_test_efvGcX.tool.Addanewrowtoselectedenvironment_bca" connectionreferenceid.connectionreferencelogicalname="crba7_test_efvGcX.cr.shared_commondataserviceforapps.8d55b203-7f18-4174-a614-b04be883c94c">
+    <iscustomizable>1</iscustomizable>
+  </botcomponent_connectionreference>
+  <botcomponent_connectionreference botcomponentid.schemaname="crba7_test_efvGcX.tool.Asktheplatformagentaquestion_JTW" connectionreferenceid.connectionreferencelogicalname="crba7_test_efvGcX.cr.shared_new-5fmulti-2dagent-20platform-20api-5f44e6bfd929e5f407">
+    <iscustomizable>1</iscustomizable>
+  </botcomponent_connectionreference>
+</botcomponent_connectionreferenceset>
