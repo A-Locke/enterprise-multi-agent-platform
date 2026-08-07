@@ -43,13 +43,17 @@ jobs:
 
       - name: Provision Infrastructure
         run: |
-          azd env new "$AZURE_ENV_NAME" --no-prompt
-          # azd normally resolves this by looking up the interactively signed-in user via
-          # Microsoft Graph -- there is no such user under federated/managed-identity CI
-          # auth, so it must be set explicitly per-environment or `azd provision` fails at
-          # "fetching current principal id" (see .env.example for where this value comes from).
+          # `azd env new` doesn't inherit AZURE_SUBSCRIPTION_ID/AZURE_LOCATION from process
+          # env into azd's own environment state -- must pass them explicitly, or azd's
+          # internal "current principal id" lookup requests /subscriptions/ with an empty
+          # subscription segment and gets a 404 MissingSubscription.
+          azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt
+          # azd normally resolves the current-principal-id by looking up the interactively
+          # signed-in user via Microsoft Graph -- there is no such user under
+          # federated/managed-identity CI auth, so it must be set explicitly per-environment
+          # too (see .env.example for where this value comes from).
           azd env set AZURE_PRINCIPAL_ID "$AZURE_PRINCIPAL_ID"
-          azd provision --no-prompt --debug
+          azd provision --no-prompt
         shell: bash
 
       - name: Deploy Application
