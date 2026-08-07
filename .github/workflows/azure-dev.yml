@@ -1,11 +1,9 @@
-# Run when commits are pushed to main
+# Manual trigger only -- deliberately not on push. Every infra change this project has made
+# went through an explicit, reviewed `az deployment` call; auto-deploying on every push to
+# main would be a real behavior change from that practice, not something to inherit silently
+# from azd's generated template default.
 on:
   workflow_dispatch:
-  push:
-    # Run when commits are pushed to mainline branch (main or master)
-    # Set this to the mainline branch you are using
-    branches:
-      - main
 
 # Set up permissions for deploying with secretless Azure federated credentials
 # https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux#set-up-azure-login-with-openid-connect-authentication
@@ -13,39 +11,37 @@ permissions:
   id-token: write
   contents: read
 
-
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      BUDGET_NOTIFICATION_EMAIL: ${{ vars.BUDGET_NOTIFICATION_EMAIL }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-      APIM_PUBLISHER_EMAIL: ${{ vars.APIM_PUBLISHER_EMAIL }}
-      AZURE_API_APP_CLIENT_ID: ${{ vars.AZURE_API_APP_CLIENT_ID }}
-      LOCAL_DEV_PRINCIPAL_ID: ${{ vars.LOCAL_DEV_PRINCIPAL_ID }}
-      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-      APIM_PUBLISHER_NAME: ${{ vars.APIM_PUBLISHER_NAME }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
+      AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+      BUDGET_NOTIFICATION_EMAIL: ${{ secrets.BUDGET_NOTIFICATION_EMAIL }}
+      APIM_PUBLISHER_EMAIL: ${{ secrets.APIM_PUBLISHER_EMAIL }}
+      APIM_PUBLISHER_NAME: ${{ secrets.APIM_PUBLISHER_NAME }}
+      AZURE_API_APP_CLIENT_ID: ${{ secrets.AZURE_API_APP_CLIENT_ID }}
+      LOCAL_DEV_PRINCIPAL_ID: ${{ secrets.LOCAL_DEV_PRINCIPAL_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install azd
         uses: Azure/setup-azd@v2
+
       - name: Log in with Azure (Federated Credentials)
         run: |
-          azd auth login `
-            --client-id "$Env:AZURE_CLIENT_ID" `
-            --federated-credential-provider "github" `
-            --tenant-id "$Env:AZURE_TENANT_ID"
-        shell: pwsh
-
+          azd auth login \
+            --client-id "$AZURE_CLIENT_ID" \
+            --federated-credential-provider "github" \
+            --tenant-id "$AZURE_TENANT_ID"
+        shell: bash
 
       - name: Provision Infrastructure
         run: azd provision --no-prompt
 
       - name: Deploy Application
         run: azd deploy --no-prompt
-        
