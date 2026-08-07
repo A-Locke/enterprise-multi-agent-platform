@@ -19,10 +19,24 @@ jobs:
       - name: Install pac CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
+      - name: Prepare managed copy
+        # The committed source declares <Managed>0</Managed> so deploy-business-data-solution.ps1
+        # keeps packing/importing Unmanaged into dev (where components stay editable via the
+        # maker portal) -- see ADR-0013. The `_managed.xml` sibling files needed to pack Managed
+        # are already present (captured via a dual `pac solution unpack --packagetype Both`), so
+        # packing Managed only needs the top-level flag flipped -- done here on a throwaway copy,
+        # never on the committed source.
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse power-platform/solutions/business-data "${{ runner.temp }}\business-data-managed-src"
+          (Get-Content "${{ runner.temp }}\business-data-managed-src\Other\Solution.xml") `
+            -replace '<Managed>0</Managed>', '<Managed>1</Managed>' |
+            Set-Content "${{ runner.temp }}\business-data-managed-src\Other\Solution.xml"
+
       - name: Pack solution (managed)
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
-          solution-folder: power-platform/solutions/business-data
+          solution-folder: ${{ runner.temp }}\business-data-managed-src
           solution-file: ${{ runner.temp }}\business-data-managed.zip
           solution-type: Managed
 
